@@ -28,7 +28,7 @@
           </ItemsControl.ItemsPanel>
 
           <ItemsControl.DataTemplates>
-            <DataTemplate DataType="chat:ChatFileAttachment">
+            <DataTemplate DataType="chat:FileChatAttachment">
               <Border
                 x:Name="PART_Border" Height="24"
                 Background="{DynamicResource CardBackgroundColor}"

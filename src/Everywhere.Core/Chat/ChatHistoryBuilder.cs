@@ -185,7 +185,7 @@ public static class ChatHistoryBuilder
     {
         switch (chatAttachment)
         {
-            case ChatTextSelectionAttachment textSelection:
+            case TextSelectionChatAttachment textSelection:
             {
                 contents.Add(
                     new TextContent(
@@ -201,7 +201,7 @@ public static class ChatHistoryBuilder
                          """));
                 break;
             }
-            case ChatVisualElementAttachment visualElement:
+            case VisualElementChatAttachment visualElement:
             {
                 contents.Add(
                     new TextContent(
@@ -212,7 +212,7 @@ public static class ChatHistoryBuilder
                          """));
                 break;
             }
-            case ChatTextAttachment text:
+            case TextChatAttachment text:
             {
                 contents.Add(
                     new TextContent(
@@ -223,7 +223,7 @@ public static class ChatHistoryBuilder
                          """));
                 break;
             }
-            case ChatFileAttachment file:
+            case FileChatAttachment file:
             {
                 var fileInfo = new FileInfo(file.FilePath);
                 if (!fileInfo.Exists || fileInfo.Length <= 0 || fileInfo.Length > 25 * 1024 * 1024) // TODO: Configurable max file size?

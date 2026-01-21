@@ -129,7 +129,7 @@ public sealed partial class ChatService(
         var visualElementAttachments = userChatMessage
             .Attachments
             .AsValueEnumerable()
-            .OfType<ChatVisualElementAttachment>()
+            .OfType<VisualElementChatAttachment>()
             .ToList();
 
         if (visualElementAttachments.Count == 0) return;
@@ -173,7 +173,7 @@ public sealed partial class ChatService(
                     foreach (var reference in userChatMessage
                                  .Attachments
                                  .AsValueEnumerable()
-                                 .OfType<ChatVisualElementAttachment>()
+                                 .OfType<VisualElementChatAttachment>()
                                  .Select(a => a.Element)
                                  .OfType<ResilientReference<IVisualElement>>())
                     {
