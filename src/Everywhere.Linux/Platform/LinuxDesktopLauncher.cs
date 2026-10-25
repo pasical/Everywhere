@@ -1,5 +1,6 @@
 ﻿using Avalonia.Platform.Storage;
 using Serilog;
+using Everywhere.Interop;
 using Tmds.DBus.Protocol;
 
 namespace Everywhere.Linux.Platform;
@@ -9,7 +10,7 @@ namespace Everywhere.Linux.Platform;
 /// configured application without inheriting Everywhere's private XDG profile.
 /// Local file launches retain the platform fallback's association handling.
 /// </summary>
-public sealed class LinuxDesktopLauncher(ILauncher fallback) : ILauncher
+public sealed partial class LinuxDesktopLauncher(ILauncher fallback) : ILauncher, IUriSchemeHandler
 {
     private const string PortalService = "org.freedesktop.portal.Desktop";
     private const string PortalPath = "/org/freedesktop/portal/desktop";

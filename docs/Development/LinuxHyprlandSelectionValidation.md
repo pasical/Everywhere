@@ -1,6 +1,6 @@
 # Desktop links and text-selection follow-up
 
-Validated on 2026-10-25, Asia/Singapore, after `b8797efc` on `linux-hyprland`. Browser fixes were committed first as `a20cad69`; selection work followed separately. No package was installed.
+Validated on 2026-10-25, Asia/Singapore, after `b8797efc` on `linux-hyprland`. Browser fixes were committed first as `a20cad69`; selection work followed separately. No package was installed. Linux callback registration creates only an application-owned desktop entry and its URI-scheme association when interactive login starts.
 
 ## External links
 
@@ -73,3 +73,14 @@ Escape, typing, scrolling and foreground changes, without consuming native input
 The native regression confirmed outside click delivery, Escape, typing, scrolling,
 menu opening and keyboard navigation. A follow-up menu-scroll check failed; popup
 global-coordinate reconciliation and editor-leave coverage still need follow-up.
+
+The source build previously had empty account endpoints and OAuth client identity.
+The deployed build now uses public configuration extracted from the official
+release metadata, supplied through an external MSBuild profile. Missing account
+configuration produces an explicit localized error. The account-config probe
+confirmed HTTPS authorization, a PKCE challenge and synthetic state validation.
+Custom-URI registration now leaves safe Exec tokens unquoted: Hyprland's generic
+xdg-open backend does not remove quotes around the executable or environment
+assignments. A Release build and the isolated `--protocol-callback` probe passed;
+xdg-open forwarded a synthetic URI to the existing process. Verification was
+limited to that callback route as requested; no real token exchange is claimed.

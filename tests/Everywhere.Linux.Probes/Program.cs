@@ -32,12 +32,15 @@ public static partial class Program
     {
         Serilog.Log.Logger = new Serilog.LoggerConfiguration().MinimumLevel.Debug().WriteTo.Console().CreateLogger();
         if (ProcessRoleCommandLine.ParseHostsControl(args) is not null ||
-            ProcessRoleCommandLine.Parse(args) != ProcessRole.Main || args.FirstOrDefault() is "--hyprland-shortcut" or "--hyprland-primary-selection")
+            ProcessRoleCommandLine.Parse(args) != ProcessRole.Main || args.FirstOrDefault() is "--hyprland-shortcut" or "--hyprland-primary-selection" ||
+            args.Any(argument => argument.StartsWith("sylinko-everywhere:", StringComparison.OrdinalIgnoreCase)))
         {
             Everywhere.Linux.Program.Main(args);
             return Environment.ExitCode;
         }
         Arguments = args;
+        if (args.FirstOrDefault() == "--account-config") return CheckAccountConfiguration(args[1]);
+        if (args.FirstOrDefault() == "--protocol-callback") return CheckProtocolCallbackAsync(args[1]).GetAwaiter().GetResult();
         if (args.FirstOrDefault() == "--launch-uri")
         {
             var launcher = new LinuxDesktopLauncher(BetterBclLauncher.Shared);

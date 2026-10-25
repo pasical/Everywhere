@@ -86,3 +86,20 @@ Selection does not need a model request. PRIMARY fallback uses an already
 installed `wl-paste`; it is separate from the regular clipboard and supplies text
 without a visual anchor. See [the follow-up validation](../../docs/Development/LinuxHyprlandSelectionValidation.md)
 for actual tested coverage and limits.
+
+## Account integration probes
+
+`--account-config REPORT` checks the build's public account configuration, PKCE
+and synthetic callback-state validation without exchanging tokens.
+`--protocol-callback REPORT` registers and launches a synthetic custom URI; run
+only in a disposable desktop session with no Everywhere instance. It writes an
+application-owned URL-handler desktop entry and scheme association. The latter
+probe passed with the generic xdg-open backend in a separate D-Bus session and
+private XDG directories; it does not perform a real account login.
+
+Local cloud-enabled builds can supply
+`-p:EverywhereCloudConfigurationFile=/absolute/path/cloud-build.props`; the XML
+project sets the same public `ClientId`, `AccountBaseUrl`, `AIGatewayBaseUrl` and
+`CloudSyncBaseUrl` properties supplied by release CI. Keep deployment values
+outside the checkout. Builds without account configuration remain usable locally
+and report a clear error when interactive sign-in is requested.
