@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Platform;
 using Avalonia.Input;
 using Avalonia.Input.Raw;
+using Avalonia.Input.TextInput;
 using Avalonia.Platform;
 using Avalonia.Platform.Surfaces;
 using Avalonia.Rendering.Composition;
@@ -25,6 +26,9 @@ partial class HyprlandWindowingPlatform
         private Action<PixelPoint>? _positionChanged;
         private Action<Size, WindowResizeReason>? _resized;
         private Action<WindowState>? _windowStateChanged;
+        private Action? _activated;
+        private Action? _deactivated;
+        private bool _isActive;
         private bool _isApplicationResize;
         private bool _isChangingVisibility;
         private Size? _hiddenClientSize;
@@ -38,6 +42,8 @@ partial class HyprlandWindowingPlatform
                 state => _windowStateChanged?.Invoke(state));
             Inner.PositionChanged = point => { if (!_isWayland) _positionChanged?.Invoke(point); };
             Inner.Resized = HandleResized;
+            Inner.Activated = HandleActivated;
+            Inner.Deactivated = HandleDeactivated;
             // Hyprland advertises maximized to suppress CSD even on ordinary
             // floating surfaces. Its IPC state is authoritative for the UI.
             Inner.WindowStateChanged = state => { if (!_isWayland) _windowStateChanged?.Invoke(state); };
@@ -111,11 +117,11 @@ partial class HyprlandWindowingPlatform
         }
         public Action? Activated
         {
-            get => Inner.Activated; set => Inner.Activated = value;
+            get => _activated; set => _activated = value;
         }
         public Action? Deactivated
         {
-            get => Inner.Deactivated; set => Inner.Deactivated = value;
+            get => _deactivated; set => _deactivated = value;
         }
         public Action? GotInputWhenDisabled
         {
@@ -177,6 +183,7 @@ partial class HyprlandWindowingPlatform
 
         public void Hide()
         {
+            _isActive = false;
             _owner.Refresh();
             _hiddenClientSize = ClientSize;
             _owner.Untrack(_state);
@@ -190,6 +197,7 @@ partial class HyprlandWindowingPlatform
         }
         public void Dispose()
         {
+            _isActive = false;
             _owner.Untrack(_state);
             _state.Dispose();
             Inner.Dispose();
@@ -234,6 +242,27 @@ partial class HyprlandWindowingPlatform
                 Inner.Resize(clientSize, reason);
             }
             finally { _isApplicationResize = wasApplicationResize; }
+        }
+
+        private void HandleActivated()
+        {
+            _isActive = true;
+            _activated?.Invoke();
+            if (!_isWayland) return;
+
+            // Hyprland deactivates the IME on text-input leave but retains the
+            // protocol's enabled state. Re-entering with enable alone then cannot
+            // reactivate it. Reset after queued enter events restores the session.
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (_isActive) Inner.TryGetFeature<ITextInputMethodImpl>()?.Reset();
+            }, DispatcherPriority.Input);
+        }
+
+        private void HandleDeactivated()
+        {
+            _isActive = false;
+            _deactivated?.Invoke();
         }
 
         private void HandleResized(Size size, WindowResizeReason reason)
