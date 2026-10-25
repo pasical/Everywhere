@@ -1,0 +1,18 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Everywhere selection demo</title>
+<style>
+  body { max-width: 900px; margin: 32px; font: 20px/1.7 system-ui; color: #172033; background: #f4f7fc; }
+  article, textarea { padding: 20px; border: 1px solid #99a9bf; border-radius: 12px; background: white; }
+  textarea { box-sizing: border-box; width: 100%; height: 140px; font: inherit; }
+</style>
+<h1>Everywhere · Browser selection demo</h1>
+<p>选择段落、双击单词，或在输入框中按 Ctrl+A。浮窗应出现在选区附近，并保持稳定。</p>
+<article>
+  <p>Browser selection fixture: this paragraph contains only synthetic public demonstration text.</p>
+  <p>Unicode selection: 中文、🌏 emoji、é combining marks. No private data or model request is needed.</p>
+  <p>Repeat selection after opening and closing the toolbar editor. The page must keep its position.</p>
+</article>
+<h2>Editable text</h2>
+<textarea aria-label="Everywhere browser input">Editable browser fixture — 中文 🌏 é
+Select this text with the mouse or keyboard.</textarea>

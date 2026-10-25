@@ -4,13 +4,17 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform;
 using Everywhere.Linux.Hyprland;
+using Everywhere.Interop;
 
 namespace Everywhere.Linux.Platform;
 
 /// <summary>UI-thread state for one owned surface, including compositor placement and input policy.</summary>
-public sealed partial class HyprlandWindowState : IDisposable
+public sealed partial class HyprlandWindowState : IDisposable, IWindowPresentation
 {
-    public PixelPoint Position => _window?.Bounds.Position ?? _position;
+    public PixelPoint Position => IsAnchoredPopup ? _position : _window?.Bounds.Position ?? _position;
+
+    /// <summary>Anchored palettes follow application placement rather than compositor centering.</summary>
+    public bool IsAnchoredPopup { get; set; }
     public bool IsTopmost
     {
         get; set;
@@ -133,6 +137,8 @@ public sealed partial class HyprlandWindowState : IDisposable
         }
         if (isFirstObservation)
             ApplyPlacement();
+        else if (IsAnchoredPopup && observed.Bounds.Position != _position)
+            Move(_position);
         if (isFirstObservation && IsTopmost)
             Raise();
         if (!_hasInputPolicy)
@@ -193,6 +199,27 @@ public sealed partial class HyprlandWindowState : IDisposable
         }
     }
 
+    /// <inheritdoc />
+    public async Task WaitForPlacementAsync(PixelRect bounds)
+    {
+        var generation = _showGeneration;
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+        while (_isVisible && generation == _showGeneration)
+        {
+            deadline.Token.ThrowIfCancellationRequested();
+            var clients = _connection.Read<HyprlandWindow[]>("clients");
+            Observe(clients);
+            var actual = clients.FirstOrDefault(window => window.InitialTitle == _token && window.ProcessId == Environment.ProcessId);
+            if (actual is not null)
+            {
+                if (actual.Bounds == bounds) return;
+                ApplyGeometry(bounds.Position, new Size(bounds.Width, bounds.Height));
+            }
+            await Task.Delay(16, deadline.Token);
+        }
+        throw new OperationCanceledException("The popup appearance ended before placement completed.");
+    }
+
     private void ApplyRule()
     {
         if (!_hasRule && !IsFloating && CanActivate && IsHitTestVisible)
@@ -206,6 +233,8 @@ public sealed partial class HyprlandWindowState : IDisposable
         var noFocus = CanActivate || IsHitTestVisible ? "false" : "true";
         var noInitialFocus = CanActivate ? "false" : "true";
         var effects = $"float=true,no_anim=true,no_focus={noFocus},no_initial_focus={noInitialFocus}";
+        if (IsAnchoredPopup)
+            effects += ",rounding=0,border_size=0,no_blur=true,no_shadow=true";
         if (_fixedBounds is { } bounds)
             effects += FormattableString.Invariant($",move={{{bounds.X},{bounds.Y}}},size={{{bounds.Width},{bounds.Height}}},rounding=0,border_size=0,no_blur=true,no_shadow=true,no_anim=true,render_unfocused=true");
         _connection.ExecuteLua($"_G.{_ruleName}=hl.window_rule({{name='{_ruleName}',match={{initial_title='^{_token}$'}},{effects}}})");

@@ -6,7 +6,10 @@ using Everywhere.ProcessIsolation.Automation;
 
 namespace Everywhere.Linux.Automation;
 
-/// <summary>Observes toolkit selection events without global input grabs or synthetic clipboard operations.</summary>
+/// <summary>
+/// Combines toolkit selection events and optional Wayland PRIMARY evidence without
+/// global input grabs, regular-clipboard mutation or synthetic Copy operations.
+/// </summary>
 public sealed class LinuxTextSelectionMonitorFactory(HyprlandVisualElementBackend backend) : ITextSelectionMonitorFactory
 {
     public ITextSelectionMonitor Create(ITextSelectionMonitorContext context, int mainProcessId,
@@ -18,16 +21,20 @@ public sealed class LinuxTextSelectionMonitorFactory(HyprlandVisualElementBacken
 
     private sealed class Monitor : ITextSelectionMonitor
     {
-        private const string EventType = "object:text-selection-changed";
+        private static readonly string[] EventTypes = ["object:text-selection-changed", "object:text-caret-moved"];
         private readonly HyprlandVisualElementBackend _backend;
         private readonly ITextSelectionMonitorContext _context;
         private readonly int _mainProcessId;
         private readonly Func<TextSelectionObservation, CancellationToken, ValueTask> _publish;
-        private readonly Channel<nint> _events = Channel.CreateBounded<nint>(8);
+        private readonly Channel<SelectionSignal> _events = Channel.CreateBounded<SelectionSignal>(8);
         private readonly CancellationTokenSource _lifetime = new();
         private readonly AtspiNative.EventCallback _callback;
         private readonly nint _listener;
         private readonly Task _pump;
+        private readonly PrimarySelectionMonitor _primary;
+        private string? _lastText;
+        private string? _lastWindow;
+        private long _lastPublication;
         private TextSelectionMonitoringConfiguration _configuration;
         private int _isDisposed;
 
@@ -47,7 +54,8 @@ public sealed class LinuxTextSelectionMonitorFactory(HyprlandVisualElementBacken
                     throw new InvalidOperationException("Could not create the accessibility selection listener.");
                 try
                 {
-                    AtspiNative.Checked(AtspiNative.atspi_event_listener_register(listener, EventType, out var error), error);
+                    foreach (var eventType in EventTypes)
+                        AtspiNative.Checked(AtspiNative.atspi_event_listener_register(listener, eventType, out var error), error);
                     return listener;
                 }
                 catch
@@ -56,6 +64,7 @@ public sealed class LinuxTextSelectionMonitorFactory(HyprlandVisualElementBacken
                     throw;
                 }
             });
+            _primary = new PrimarySelectionMonitor(change => Queue(new SelectionSignal(0, change)));
             _pump = RunAsync();
         }
 
@@ -70,26 +79,35 @@ public sealed class LinuxTextSelectionMonitorFactory(HyprlandVisualElementBacken
         {
             if (Interlocked.Exchange(ref _isDisposed, 1) != 0)
                 return;
-            _backend.Accessibility.Call(() =>
+            try
             {
-                try
+                _backend.Accessibility.Call(() =>
                 {
-                    AtspiNative.Checked(AtspiNative.atspi_event_listener_deregister(_listener, EventType, out var error), error);
-                }
-                finally { AtspiNative.g_object_unref(_listener); }
-                return true;
-            });
+                    try
+                    {
+                        foreach (var eventType in EventTypes)
+                            AtspiNative.Checked(AtspiNative.atspi_event_listener_deregister(_listener, eventType, out var error), error);
+                    }
+                    finally { AtspiNative.g_object_unref(_listener); }
+                    return true;
+                });
+            }
+            catch (Exception exception)
+            {
+                Serilog.Log.Debug("Selection listener cleanup encountered {FailureType}.", exception.GetType().Name);
+            }
             _lifetime.Cancel();
             _events.Writer.TryComplete();
             try
             {
+                await _primary.DisposeAsync().ConfigureAwait(false);
                 await _pump.ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
             finally
             {
                 while (_events.Reader.TryRead(out var source))
-                    _backend.Accessibility.Release(source);
+                    _backend.Accessibility.Release(source.Source);
                 _lifetime.Dispose();
             }
         }
@@ -106,68 +124,121 @@ public sealed class LinuxTextSelectionMonitorFactory(HyprlandVisualElementBacken
                 if (source == 0)
                     return;
                 AtspiNative.g_object_ref(source);
-                if (!_events.Writer.TryWrite(source))
-                    AtspiNative.g_object_unref(source);
+                Queue(new SelectionSignal(source, null));
             }
             finally { AtspiNative.FreeEvent(nativeEvent); }
+        }
+
+        private void Queue(SelectionSignal signal)
+        {
+            if (Volatile.Read(ref _isDisposed) != 0)
+            {
+                _backend.Accessibility.Release(signal.Source);
+                return;
+            }
+            // A drag can generate many intermediate ranges. Release discarded
+            // native proxies explicitly and retain the newest evidence only.
+            while (!_events.Writer.TryWrite(signal))
+            {
+                if (!_events.Reader.TryRead(out var previous))
+                {
+                    _backend.Accessibility.Release(signal.Source);
+                    return;
+                }
+                _backend.Accessibility.Release(previous.Source);
+            }
         }
 
         private async Task RunAsync()
         {
             await foreach (var initial in _events.Reader.ReadAllAsync(_lifetime.Token).ConfigureAwait(false))
             {
-                var source = initial;
+                var signal = initial;
                 try
                 {
-                    await Task.Delay(80, _lifetime.Token).ConfigureAwait(false);
-                    while (_events.Reader.TryRead(out var next))
+                    while (true)
                     {
-                        _backend.Accessibility.Release(source);
-                        source = next;
+                        await Task.Delay(150, _lifetime.Token).ConfigureAwait(false);
+                        var hasNewerSignal = false;
+                        while (_events.Reader.TryRead(out var next))
+                        {
+                            _backend.Accessibility.Release(signal.Source);
+                            signal = next;
+                            hasNewerSignal = true;
+                        }
+                        if (!hasNewerSignal) break;
                     }
-                    var observation = await _context.ExecuteAsync((context, backend, token) =>
+                    var evidence = await _context.ExecuteAsync((context, backend, token) =>
                     {
                         token.ThrowIfCancellationRequested();
-                        var window = _backend.Connection.Read<Hyprland.HyprlandWindow>("activewindow");
-                        if (window.ProcessId == _mainProcessId || window.ProcessId <= 0)
-                            return null;
-                        var configuration = Volatile.Read(ref _configuration);
-                        if (configuration.IsFullscreenApplicationExcluded && window.Fullscreen != 0)
-                            return null;
-                        var path = File.ResolveLinkTarget($"/proc/{window.ProcessId}/exe", true)?.FullName;
-                        if (path is null || configuration.ExcludedApplications.Contains(path, StringComparer.Ordinal))
-                            return null;
-                        if (_backend.Accessibility.Call(() => AtspiNative.Pid(source)) != window.ProcessId)
-                            return null;
-                        var retention = context.CreateRetention();
-                        try
-                        {
-                            var element = AtspiVisualElement.GetOrCreate(retention, _backend, window, source);
-                            var text = element.GetSelectedText(65536);
-                            if (string.IsNullOrWhiteSpace(text))
-                                return null;
-                            var result = element.Query(new VisualElementQueryRequest(VisualElementFields.Id | VisualElementFields.Bounds | VisualElementFields.ProcessId, 0));
-                            var pointer = _backend.Connection.Read<Dictionary<string, int>>("cursorpos");
-                            var observation = new TextSelectionObservation(_context, text, new TextSelectionSource(retention, result), text.Length >= 32768)
-                            {
-                                ApplicationIdentity = path,
-                                PointerPosition = new PixelPoint(pointer["x"], pointer["y"])
-                            };
-                            retention = null;
-                            return observation;
-                        }
-                        finally { retention?.Dispose(); }
+                        return ReadSelection(context, signal);
                     }, _lifetime.Token).ConfigureAwait(false);
-                    if (observation is not null)
+                    if (evidence is null) continue;
+                    var observation = evidence.Observation;
+                    await using (observation.ConfigureAwait(false))
                     {
-                        await using (observation.ConfigureAwait(false))
-                            await _publish(observation, _lifetime.Token).ConfigureAwait(false);
+                        // Native and PRIMARY events can describe the same gesture.
+                        // Avoid remapping the toolbar twice, but allow a later
+                        // deliberate selection of the same text to show it again.
+                        var window = evidence.WindowAddress;
+                        var now = Environment.TickCount64;
+                        if (_lastText == observation.Text && _lastWindow == window && now - _lastPublication < 600) continue;
+                        await _publish(observation, _lifetime.Token).ConfigureAwait(false);
+                        _lastText = observation.Text;
+                        _lastWindow = window;
+                        _lastPublication = now;
                     }
                 }
-                catch (VisualElementProviderException) { }
-                catch (TimeoutException) { }
-                finally { _backend.Accessibility.Release(source); }
+                catch (Exception exception) when (exception is VisualElementProviderException or TimeoutException or NotSupportedException or IOException)
+                {
+                    // One incomplete toolkit observation must not end monitoring
+                    // for all later applications. No selected text is logged.
+                }
+                finally { _backend.Accessibility.Release(signal.Source); }
             }
         }
+
+        private SelectionEvidence? ReadSelection(VisualContext context, SelectionSignal signal)
+        {
+            var window = _backend.Connection.Read<Hyprland.HyprlandWindow>("activewindow");
+            if (window.ProcessId == _mainProcessId || window.ProcessId <= 0) return null;
+            var configuration = Volatile.Read(ref _configuration);
+            if (configuration.IsFullscreenApplicationExcluded && window.Fullscreen != 0) return null;
+            var path = File.ResolveLinkTarget($"/proc/{window.ProcessId}/exe", true)?.FullName;
+            if (path is null || configuration.ExcludedApplications.Contains(path, StringComparer.Ordinal)) return null;
+            if (signal.Primary is { } primary)
+            {
+                if (string.IsNullOrWhiteSpace(primary.Text) || primary.ProcessId != window.ProcessId || primary.WindowAddress != window.Address) return null;
+                // PRIMARY proves selected text, not which accessible object owns
+                // it. Never manufacture a remote visual anchor from later focus.
+                var observation = new TextSelectionObservation(_context, primary.Text, isTextIncomplete: primary.IsIncomplete)
+                {
+                    ApplicationIdentity = path,
+                    PointerPosition = new PixelPoint(primary.PointerX, primary.PointerY)
+                };
+                return new SelectionEvidence(observation, window.Address);
+            }
+            if (_backend.Accessibility.Call(() => AtspiNative.Pid(signal.Source)) != window.ProcessId) return null;
+            var retention = context.CreateRetention();
+            try
+            {
+                var element = AtspiVisualElement.GetOrCreate(retention, _backend, window, signal.Source);
+                var text = element.GetSelectedText(65536);
+                if (string.IsNullOrWhiteSpace(text)) return null;
+                var result = element.Query(new VisualElementQueryRequest(VisualElementFields.Id | VisualElementFields.ProcessId, 0));
+                var pointer = _backend.Connection.Read<Dictionary<string, int>>("cursorpos");
+                var observation = new TextSelectionObservation(_context, text, new TextSelectionSource(retention, result), text.Length >= 32768)
+                {
+                    ApplicationIdentity = path,
+                    PointerPosition = new PixelPoint(pointer["x"], pointer["y"])
+                };
+                retention = null;
+                return new SelectionEvidence(observation, window.Address);
+            }
+            finally { retention?.Dispose(); }
+        }
+
+        private sealed record SelectionEvidence(TextSelectionObservation Observation, string WindowAddress);
+        private sealed record SelectionSignal(nint Source, PrimarySelectionChange? Primary);
     }
 }

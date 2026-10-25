@@ -1,0 +1,12 @@
+{
+  "stoppedOwnedProcesses": [
+    1156952,
+    1156953
+  ],
+  "ownedPrimaryWatchersRemaining": [],
+  "nestedStopExitCode": 0,
+  "restoredMainPid": 1173116,
+  "isMainAlive": true,
+  "authenticatedHosts": 2,
+  "originalProfileRestored": true
+}

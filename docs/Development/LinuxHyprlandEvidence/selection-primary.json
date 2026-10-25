@@ -1,0 +1,29 @@
+{
+  "workspace": 99,
+  "toolbar": {
+    "at": [
+      6,
+      265
+    ],
+    "size": [
+      642,
+      57
+    ],
+    "floating": true,
+    "xwayland": false
+  },
+  "pointer": [
+    93,
+    249.0
+  ],
+  "fixture": {
+    "at": [
+      9,
+      53
+    ],
+    "size": [
+      1083,
+      1172
+    ]
+  }
+}

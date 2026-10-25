@@ -44,6 +44,19 @@ public static class Program
             await HyprlandInputHostSession.RelayAsync(pipeName, registration).ConfigureAwait(false);
             return 0;
         }
+        if (args is ["--hyprland-primary-selection", var selectionPipe])
+        {
+            try
+            {
+                await PrimarySelectionMonitor.RelayAsync(selectionPipe).ConfigureAwait(false);
+                return 0;
+            }
+            catch (Exception exception) when (exception is IOException or TimeoutException or OperationCanceledException or InvalidOperationException)
+            {
+                Log.Debug("The PRIMARY relay was discarded ({FailureType}).", exception.GetType().Name);
+                return 1;
+            }
+        }
         var peerVerifier = new LinuxNamedPipePeerVerifier();
         if (ProcessRoleCommandLine.ParseHostsControl(args) is { } hostsControlCommand)
             return await HostsControlRunner.RunAsync(hostsControlCommand, DirectHostsControlPlatform.Instance, peerVerifier).ConfigureAwait(false);
@@ -82,7 +95,7 @@ public static class Program
             .AddSingleton<IWindowHelper>(sp => sp.GetRequiredService<LinuxWindowHelper>())
             .AddSingleton<IScreenSelectionService, HyprlandScreenSelectionService>()
             .AddSingleton<INativeHelper, LinuxNativeHelper>()
-            .AddSingleton<IOverlayInputWatcher, UnsupportedOverlayInputWatcher>()
+            .AddSingleton<IOverlayInputWatcher, HyprlandOverlayInputWatcher>()
             .AddSingleton<IPlatformUpdateHandler, LinuxUpdateHandler>()
             .AddSingleton<ISoftwareUpdater, SoftwareUpdater>()
             .AddSettings()

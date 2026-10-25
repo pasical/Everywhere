@@ -1,0 +1,40 @@
+{
+  "terminal": {
+    "at": [
+      565,
+      95
+    ],
+    "size": [
+      613,
+      57
+    ],
+    "floating": true,
+    "initialTitle": "Everywhere surface 1169597 4 1"
+  },
+  "editorHasFocus": true,
+  "browser": {
+    "at": [
+      6,
+      706
+    ],
+    "size": [
+      610,
+      58
+    ],
+    "floating": true,
+    "initialTitle": "Everywhere surface 1169597 4 2"
+  },
+  "gtk": {
+    "at": [
+      720,
+      226
+    ],
+    "size": [
+      639,
+      58
+    ],
+    "floating": true,
+    "initialTitle": "Everywhere surface 1169597 4 3"
+  },
+  "regularClipboardUnchanged": true
+}

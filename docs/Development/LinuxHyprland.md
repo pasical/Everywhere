@@ -63,3 +63,9 @@ connection stays alive until the portal's Response; cancellation/failure returns
 false, and login reports a launch failure instead of waiting for a callback.
 When OpenURI is absent, the BCL fallback passes one argument to `xdg-open`
 without a shell. The browser automation plugin retains its own separate profile.
+
+Text-selection palettes use an anchored presentation role and a first-frame
+placement barrier. AT-SPI caret/selection events are supplemented by optional
+Wayland PRIMARY observation through an installed `wl-paste`. PRIMARY results are
+text-only, respect foreground/exclusion checks and never replace the regular
+clipboard. See [the links and selection follow-up](LinuxHyprlandSelectionValidation.md).

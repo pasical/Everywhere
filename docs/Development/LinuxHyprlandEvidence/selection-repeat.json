@@ -1,0 +1,98 @@
+[
+  {
+    "application": "terminal",
+    "toolbar": {
+      "at": [
+        86,
+        95
+      ],
+      "size": [
+        610,
+        58
+      ],
+      "floating": true,
+      "initialTitle": "Everywhere surface 1162834 4 4"
+    },
+    "stable": true
+  },
+  {
+    "application": "gtk",
+    "toolbar": {
+      "at": [
+        720,
+        760
+      ],
+      "size": [
+        639,
+        58
+      ],
+      "floating": true,
+      "initialTitle": "Everywhere surface 1162834 4 5"
+    },
+    "stable": true
+  },
+  {
+    "application": "browser",
+    "toolbar": {
+      "at": [
+        6,
+        706
+      ],
+      "size": [
+        610,
+        58
+      ],
+      "floating": true,
+      "initialTitle": "Everywhere surface 1162834 4 6"
+    },
+    "stable": true
+  },
+  {
+    "application": "terminal",
+    "toolbar": {
+      "at": [
+        86,
+        95
+      ],
+      "size": [
+        610,
+        58
+      ],
+      "floating": true,
+      "initialTitle": "Everywhere surface 1162834 4 7"
+    },
+    "stable": true
+  },
+  {
+    "application": "gtk",
+    "toolbar": {
+      "at": [
+        720,
+        760
+      ],
+      "size": [
+        639,
+        58
+      ],
+      "floating": true,
+      "initialTitle": "Everywhere surface 1162834 4 8"
+    },
+    "stable": true
+  },
+  {
+    "application": "terminal",
+    "toolbar": {
+      "at": [
+        86,
+        95
+      ],
+      "size": [
+        610,
+        58
+      ],
+      "floating": true,
+      "initialTitle": "Everywhere surface 1162834 4 9"
+    },
+    "stable": true
+  }
+]

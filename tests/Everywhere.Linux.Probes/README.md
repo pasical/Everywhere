@@ -71,3 +71,18 @@ its success, cancel and failure examples from the script's docstring after
 building the probes. Each case checks an OAuth-shaped URI containing `&`, `+`,
 percent escapes and shell metacharacters, and verifies the asynchronous response.
 No real browser is launched by those private-bus cases.
+
+## Selection recording across applications
+
+Open `selection.html` in a browser for a completely synthetic page with plain
+paragraphs, Unicode and an editable text area. Run `demo.sh` for the GTK fixture.
+In a disposable terminal, print a few lines and select them with the mouse to
+exercise PRIMARY fallback when the terminal has no AT-SPI Text interface.
+
+Select, enter the toolbar editor, cancel, switch applications and select the
+same text again. The palette should remain near the pointer and have no enclosing
+compositor border/shadow. Its editor should receive input only after interaction.
+Selection does not need a model request. PRIMARY fallback uses an already
+installed `wl-paste`; it is separate from the regular clipboard and supplies text
+without a visual anchor. See [the follow-up validation](../../docs/Development/LinuxHyprlandSelectionValidation.md)
+for actual tested coverage and limits.

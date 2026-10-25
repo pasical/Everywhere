@@ -32,7 +32,7 @@ public static partial class Program
     {
         Serilog.Log.Logger = new Serilog.LoggerConfiguration().MinimumLevel.Debug().WriteTo.Console().CreateLogger();
         if (ProcessRoleCommandLine.ParseHostsControl(args) is not null ||
-            ProcessRoleCommandLine.Parse(args) != ProcessRole.Main || args.FirstOrDefault() == "--hyprland-shortcut")
+            ProcessRoleCommandLine.Parse(args) != ProcessRole.Main || args.FirstOrDefault() is "--hyprland-shortcut" or "--hyprland-primary-selection")
         {
             Everywhere.Linux.Program.Main(args);
             return Environment.ExitCode;

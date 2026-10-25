@@ -54,6 +54,7 @@ partial class HyprlandWindowingPlatform
         {
             // HyperlinkButton and TopLevel.Launcher must use the same desktop
             // route as login and other links launched outside a native window.
+            if (featureType == typeof(Everywhere.Interop.IWindowPresentation)) return _state;
             if (featureType == typeof(Avalonia.Platform.Storage.ILauncher))
                 return Everywhere.Interop.BetterBclLauncher.Shared;
             return featureType == typeof(HyprlandWindowState) ? _state : Inner.TryGetFeature(featureType);

@@ -106,6 +106,7 @@ public sealed partial class LinuxWindowHelper : IWindowHelper, IDisposable
     {
         if (window.PlatformImpl?.TryGetFeature<HyprlandWindowState>() is not { } state)
             return;
+        state.IsAnchoredPopup = window is TextSelectionToolbarWindow;
         if (window is ChatWindow or TextSelectionToolbarWindow)
             state.IsFloating = true;
         else if (window is VisualElementOverlayWindow)
