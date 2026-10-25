@@ -69,3 +69,17 @@ placement barrier. AT-SPI caret/selection events are supplemented by optional
 Wayland PRIMARY observation through an installed `wl-paste`. PRIMARY results are
 text-only, respect foreground/exclusion checks and never replace the regular
 clipboard. See [the links and selection follow-up](LinuxHyprlandSelectionValidation.md).
+
+Account dashboard, subscription and support actions use `App.Launcher` directly.
+The account card is also hosted in native flyouts, whose popup launcher does not
+pass through the Hyprland top-level window adapter. Using that popup launcher
+could start a browser with Everywhere's private XDG configuration. Account links
+now use the same desktop-portal route as login, independently of their UI host.
+
+Validated on 2026-10-26 (Asia/Singapore): all three account-action regression
+cases failed against the old implementation and passed with this route; all
+36 Linux tests also passed. A public repository URL was accepted by the real
+desktop portal. The added Chrome process was a child of the existing browser,
+rather than a new browser root. Everywhere was restarted with its original
+profile and both Hosts authenticated. No private browser interface was inspected
+and no real login was repeated. See [the native result](LinuxHyprlandEvidence/account-links.json).

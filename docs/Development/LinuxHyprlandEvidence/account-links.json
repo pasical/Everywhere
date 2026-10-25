@@ -1,0 +1,23 @@
+{
+  "DesktopPortalLaunchExitCode": 0,
+  "LaunchAccepted": true,
+  "MainAlive": true,
+  "AuthenticatedHosts": 2,
+  "OriginalProfileRestored": true,
+  "PrivateBrowserInterfacesInspected": false,
+  "RealAccountLoginRepeated": false,
+  "NewBrowserProcessEvidence": [
+    {
+      "pid": 1264164,
+      "parentPid": 144029,
+      "processName": "chrome",
+      "parentProcessName": "chrome",
+      "hasBrowserParent": true
+    }
+  ],
+  "ObservedBrowserProcessCount": 22,
+  "NewBrowserProcesses": [
+    1264164
+  ],
+  "NewBrowserRootProcesses": []
+}
