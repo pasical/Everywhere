@@ -1,0 +1,263 @@
+{
+  "scope": "Linux AT-SPI adapter; shared core unchanged",
+  "linuxTestsPassed": 58,
+  "syntheticBaseline": {
+    "baseline": true,
+    "cases": [
+      {
+        "case": "deep",
+        "passed": true,
+        "hitName": "",
+        "failure": null,
+        "projectionCharacters": 1395
+      },
+      {
+        "case": "wide",
+        "passed": true,
+        "hitName": "Everywhere AT-SPI wide",
+        "failure": null,
+        "projectionCharacters": 8512
+      },
+      {
+        "case": "logical",
+        "passed": true,
+        "hitName": "Everywhere AT-SPI logical",
+        "failure": null,
+        "projectionCharacters": 236
+      }
+    ]
+  },
+  "nativeCases": {
+    "baseline": false,
+    "cases": [
+      {
+        "case": "deep",
+        "passed": true,
+        "hitName": "Expected target",
+        "failure": null,
+        "projectionCharacters": 183
+      },
+      {
+        "case": "wide",
+        "passed": true,
+        "hitName": "Expected target",
+        "failure": null,
+        "projectionCharacters": 6883
+      },
+      {
+        "case": "logical",
+        "passed": true,
+        "hitName": "Expected target",
+        "failure": null,
+        "projectionCharacters": 189
+      },
+      {
+        "case": "missing-geometry",
+        "passed": true,
+        "hitName": "Expected target",
+        "failure": "Unsupported",
+        "projectionCharacters": 247
+      },
+      {
+        "case": "cycle",
+        "passed": true,
+        "hitName": "Expected target",
+        "failure": "ProviderFailure",
+        "projectionCharacters": 185
+      },
+      {
+        "case": "limit",
+        "passed": true,
+        "hitName": "",
+        "failure": "LimitReached",
+        "projectionCharacters": 185
+      },
+      {
+        "case": "managed",
+        "passed": true,
+        "hitName": "Managed table",
+        "failure": null,
+        "projectionCharacters": 291
+      },
+      {
+        "case": "focus-wide",
+        "passed": true,
+        "hitName": "Expected focus",
+        "failure": null,
+        "projectionCharacters": 10626
+      },
+      {
+        "case": "foreign-focus",
+        "passed": true,
+        "hitName": "Everywhere AT-SPI foreign-focus",
+        "failure": null,
+        "projectionCharacters": 157
+      },
+      {
+        "case": "defunct-once",
+        "passed": true,
+        "hitName": "Everywhere AT-SPI defunct-once",
+        "failure": null,
+        "projectionCharacters": 155
+      }
+    ]
+  },
+  "toolkits": [
+    {
+      "toolkit": "gtk4",
+      "nativeWayland": true,
+      "hitName": "",
+      "hitFailure": null,
+      "projectionCharacters": 1226,
+      "tree": "<visual-context><TopLevel id=1 name=\"Everywhere controlled fixture\" origin><Panel id=2 name=\"Everywhere controlled fixture\"><Panel id=3><Composite id=4>Everywhere · Linux / Hyprland Demo\nF1 屏幕 / F2 窗口 / F3 元素 · 截屏可用 F4 框选 · Esc 取消\n依次悬停：输入框、按钮、复选框、长文本和彩色色块，观察选框范围。</Composite><Panel id=5><Panel id=6><Label id=7 name=\"Unicode / editable input\"/><TextEdit id=8 focused>Initial native text 🌏 漢字 é</TextEdit><CheckBox id=9 name=\"Everywhere demo checkbox\"><Label id=10 name=\"Everywhere demo checkbox\"/></CheckBox><Slider id=11/><ComboBox id=12 name=\"First item\"><CheckBox id=13 name=\"First item\"><Label id=14 name=\"First item\"/></CheckBox></ComboBox></Panel><Panel id=15><Button id=16 name=\"Everywhere target button\"><Label id=17 name=\"Everywhere target button\"/></Button><Label id=18 name=\"Click count: 1\"/><Button id=19 name=\"Change live text / 更新内容\"><Label id=20 name=\"Change live text / 更新内容\"/></Button><Button id=21 name=\"Reset counter / 重置计数\"><Label id=22 name=\"Reset counter / 重置计数\"/></Button></Panel></Panel><Label id=23 name=\"Scrollable text · 选择元素后滚动，再读取或截屏\"/><TextEdit id=24>Hyprland Unicode 🌏 漢字 é</TextEdit><Composite id=25>RED · 红\nGREEN · 绿\nBLUE · 蓝\nWHITE · 白</Composite></Panel></Panel></TopLevel></visual-context>"
+    },
+    {
+      "toolkit": "qt-widgets",
+      "nativeWayland": true,
+      "hitName": "Expected Qt button",
+      "hitFailure": null,
+      "projectionCharacters": 639,
+      "tree": "<visual-context><TopLevel id=1 name=\"Everywhere AT-SPI Qt Widgets\" origin><Panel id=2 name=\"Everywhere AT-SPI Qt Widgets\"><Label id=3 name=\"Synthetic Qt Widgets controls\" readOnly/><TextEdit id=4 name=\"Editable field\">Editable synthetic text</TextEdit><TextEdit id=5 name=\"Read-only field\" readOnly>Read-only synthetic text</TextEdit><Button id=6 name=\"Expected Qt button\" focused/><TreeView id=7><HeaderItem id=8 name=\"Synthetic header\"/><DataGridItem id=9 name=\"Synthetic tree item\"/></TreeView><ProgressBar id=10 name=\"Synthetic progress\" readOnly/><Spinner id=11 name=\"Synthetic spinner\">0</Spinner></Panel></TopLevel></visual-context>"
+    },
+    {
+      "toolkit": "qt-quick",
+      "nativeWayland": true,
+      "hitName": "Expected Qt button",
+      "hitFailure": null,
+      "projectionCharacters": 572,
+      "tree": "<visual-context><TopLevel id=1 name=\"Everywhere AT-SPI Qt Quick\" origin><Panel id=2 name=\"Everywhere AT-SPI Qt Quick\"><Panel id=3><Label id=4 name=\"Synthetic Qt Quick controls\" readOnly/><TextEdit id=5 name=\"Editable field\">Editable synthetic text</TextEdit><TextEdit id=6 name=\"Read-only field\" readOnly>Read-only synthetic text</TextEdit><Button id=7 name=\"Expected Qt button\" focused/><ProgressBar id=8 name=\"Synthetic progress\" readOnly/><Spinner id=9 name=\"Synthetic spinner\"><TextEdit id=10 readOnly>0</TextEdit></Spinner></Panel></Panel></TopLevel></visual-context>"
+    }
+  ],
+  "chrome": {
+    "forcedRendererAccessibility": false,
+    "persistentAssistiveClientBeforeLaunch": true,
+    "semanticReadAccepted": true,
+    "geometryAccepted": false,
+    "windowBounds": {
+      "X": 11,
+      "Y": 11,
+      "Width": 1898,
+      "Height": 1058,
+      "Position": {
+        "X": 11,
+        "Y": 11
+      },
+      "Size": {
+        "AspectRatio": 1.7939508506616257,
+        "Width": 1898,
+        "Height": 1058
+      },
+      "Right": 1909,
+      "Bottom": 1069,
+      "TopLeft": {
+        "X": 11,
+        "Y": 11
+      },
+      "TopRight": {
+        "X": 1909,
+        "Y": 11
+      },
+      "BottomLeft": {
+        "X": 11,
+        "Y": 1069
+      },
+      "BottomRight": {
+        "X": 1909,
+        "Y": 1069
+      },
+      "Center": {
+        "X": 960,
+        "Y": 540
+      }
+    },
+    "nativeRootBounds": {
+      "X": 0,
+      "Y": 0,
+      "Width": 1898,
+      "Height": 1058,
+      "Position": {
+        "X": 0,
+        "Y": 0
+      },
+      "Size": {
+        "AspectRatio": 1.7939508506616257,
+        "Width": 1898,
+        "Height": 1058
+      },
+      "Right": 1898,
+      "Bottom": 1058,
+      "TopLeft": {
+        "X": 0,
+        "Y": 0
+      },
+      "TopRight": {
+        "X": 1898,
+        "Y": 0
+      },
+      "BottomLeft": {
+        "X": 0,
+        "Y": 1058
+      },
+      "BottomRight": {
+        "X": 1898,
+        "Y": 1058
+      },
+      "Center": {
+        "X": 949,
+        "Y": 529
+      }
+    },
+    "hit": {
+      "Id": "linux:1",
+      "Type": 3,
+      "States": 4,
+      "Name": "Everywhere selection demo",
+      "TextPreview": "￼￼￼￼￼",
+      "Bounds": {
+        "X": 11,
+        "Y": 163,
+        "Width": 3322,
+        "Height": 1700,
+        "Position": {
+          "X": 11,
+          "Y": 163
+        },
+        "Size": {
+          "AspectRatio": 1.9541176470588235,
+          "Width": 3322,
+          "Height": 1700
+        },
+        "Right": 3333,
+        "Bottom": 1863,
+        "TopLeft": {
+          "X": 11,
+          "Y": 163
+        },
+        "TopRight": {
+          "X": 3333,
+          "Y": 163
+        },
+        "BottomLeft": {
+          "X": 11,
+          "Y": 1863
+        },
+        "BottomRight": {
+          "X": 3333,
+          "Y": 1863
+        },
+        "Center": {
+          "X": 1672,
+          "Y": 1013
+        }
+      },
+      "ProcessId": 1336006,
+      "NativeWindow": "55E1429BDF30",
+      "FailureKind": null,
+      "FailureAgentMessage": null
+    },
+    "projectionCharacters": 8885
+  },
+  "modelRequests": 0,
+  "privateInterfacesInspected": false,
+  "systemSettingsChanged": false
+}

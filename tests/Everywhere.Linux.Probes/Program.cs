@@ -48,7 +48,7 @@ public static partial class Program
             File.WriteAllText(args[1], JsonSerializer.Serialize(new { IsLaunched = isLaunched }));
             return isLaunched ? 0 : 1;
         }
-        if (args.FirstOrDefault() == "--observe")
+        if (args.FirstOrDefault() is "--observe" or "--observe-focused")
         {
             try { return Observe(args); }
             catch (Exception exception)

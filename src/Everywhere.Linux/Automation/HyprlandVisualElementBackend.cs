@@ -13,10 +13,7 @@ public sealed partial class HyprlandVisualElementBackend : IVisualElementBackend
 {
     public HyprlandConnection Connection { get; } = new();
     public AtspiClient Accessibility { get; } = new();
-    private const int MaximumHitTestDepth = 32;
-    private const int MaximumSearchedControls = 256;
     private const int MaximumApplicationWindows = 128;
-    private const int QueryBudgetMilliseconds = 500;
     private const int BoundsRetryDelayMilliseconds = 1000;
     private long _nextId;
     private readonly Dictionary<(int ProcessId, string Address), long> _boundsRetryTimes = [];
@@ -109,7 +106,16 @@ public sealed partial class HyprlandVisualElementBackend : IVisualElementBackend
         catch (NotSupportedException) { return GetWindow(retention, window).Query(request); }
         if (root == 0)
             return GetWindow(retention, window).Query(request);
-        return QueryAccessible(retention, window, root, locator, point, request);
+        try { return QueryAccessible(retention, window, root, locator, point, request); }
+        catch (VisualElementProviderException exception) when (exception.Kind == VisualElementQueryFailureKind.ElementUnavailable)
+        {
+            // Enabling a lazy bridge can replace its initial window proxy. The
+            // previous Call has returned, so the native dispatcher can drain its
+            // events before one cache refresh/reacquisition. Never retry indefinitely.
+            root = Accessibility.Call(() => FindAccessibleWindow(window, shouldRefresh: true));
+            return root == 0 ? GetWindow(retention, window).Query(request) :
+                QueryAccessible(retention, window, root, locator, point, request);
+        }
     }
 
     private PixelPoint ReadPointer()

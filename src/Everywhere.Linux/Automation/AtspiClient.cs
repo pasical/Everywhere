@@ -1,4 +1,6 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Everywhere.Automation;
 
 namespace Everywhere.Linux.Automation;
@@ -14,11 +16,13 @@ public sealed class AtspiClient : IDisposable
     private readonly Thread _thread;
     private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private bool _isInitialized;
-    private readonly AtspiNative.EventCallback _activityCallback = OnActivity;
+    private readonly AtspiNative.EventCallback _activityCallback;
+    private nint _focusedElement;
     private nint _activityListener;
 
     public AtspiClient()
     {
+        _activityCallback = OnActivity;
         _thread = new Thread(Run) { IsBackground = true, Name = "Everywhere AT-SPI" };
         _thread.Start();
         _ready.Task.GetAwaiter().GetResult();
@@ -101,6 +105,7 @@ public sealed class AtspiClient : IDisposable
                 }
                 finally { AtspiNative.g_object_unref(_activityListener); }
             }
+            if (_focusedElement != 0) AtspiNative.g_object_unref(_focusedElement);
             if (_isInitialized)
                 AtspiNative.atspi_exit();
         }
@@ -142,9 +147,61 @@ public sealed class AtspiClient : IDisposable
         _isInitialized = true;
     }
 
-    private static void OnActivity(nint nativeEvent, nint userData)
+    /// <summary>
+    /// Returns an owned reference to the last focused descendant only after its
+    /// current state and parent chain confirm membership in the requested window.
+    /// The cache is native-dispatcher-owned and never retains a visual Context.
+    /// </summary>
+    public nint GetFocusedDescendant(nint root)
     {
-        if (nativeEvent != 0)
-            AtspiNative.FreeEvent(nativeEvent);
+        return Call(() =>
+        {
+            if (_focusedElement == 0) return 0;
+            var deadline = Stopwatch.StartNew();
+            var visited = new HashSet<nint>();
+            var references = new List<nint>();
+            try
+            {
+                if (!AtspiNative.HasState(_focusedElement, AtspiState.Focused)) return 0;
+                var current = AtspiNative.g_object_ref(_focusedElement);
+                while (current != 0 && references.Count < AtspiQueryLimits.MaximumNodes && deadline.ElapsedMilliseconds < AtspiQueryLimits.MaximumElapsedMilliseconds)
+                {
+                    references.Add(current);
+                    if (current == root) return AtspiNative.g_object_ref(_focusedElement);
+                    if (!visited.Add(current)) break;
+                    current = AtspiNative.Checked(AtspiNative.atspi_accessible_get_parent(current, out var error), error);
+                    if (current != 0 && (references.Count >= AtspiQueryLimits.MaximumNodes || deadline.ElapsedMilliseconds >= AtspiQueryLimits.MaximumElapsedMilliseconds))
+                    {
+                        AtspiNative.g_object_unref(current);
+                        break;
+                    }
+                }
+                return 0;
+            }
+            catch (Exception exception) when (exception is TimeoutException or VisualElementProviderException)
+            {
+                return 0;
+            }
+            finally
+            {
+                foreach (var reference in references) AtspiNative.g_object_unref(reference);
+            }
+        });
+    }
+
+    private void OnActivity(nint nativeEvent, nint userData)
+    {
+        if (nativeEvent == 0) return;
+        try
+        {
+            var source = Marshal.ReadIntPtr(nativeEvent, IntPtr.Size);
+            var isFocused = Marshal.ReadInt32(nativeEvent, IntPtr.Size * 2) != 0;
+            if (source == 0) return;
+            if (!isFocused && source != _focusedElement) return;
+            var next = isFocused ? AtspiNative.g_object_ref(source) : 0;
+            if (_focusedElement != 0) AtspiNative.g_object_unref(_focusedElement);
+            _focusedElement = next;
+        }
+        finally { AtspiNative.FreeEvent(nativeEvent); }
     }
 }

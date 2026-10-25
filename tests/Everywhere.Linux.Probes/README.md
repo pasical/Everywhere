@@ -103,3 +103,38 @@ project sets the same public `ClientId`, `AccountBaseUrl`, `AIGatewayBaseUrl` an
 `CloudSyncBaseUrl` properties supplied by release CI. Keep deployment values
 outside the checkout. Builds without account configuration remain usable locally
 and report a clear error when interactive sign-in is requested.
+
+## Linux AT-SPI traversal regressions
+
+`atspi_fixture.py` exports a deliberately synthetic AT-SPI provider with its own
+GTK window. `atspi_regression.py` refuses any desktop other than the disposable
+session recorded by `isolated.py`. With that session's environment, run:
+
+```sh
+python3 tests/Everywhere.Linux.Probes/atspi_regression.py
+```
+
+The cases cover deep/wide trees, logical wrappers without Component, missing leaf
+bounds, provider cycles, bounded traversal, sparse virtual descendants, focused
+nodes beyond a wide search frontier, foreign-window focus, and stale proxies.
+`--baseline --probe /path/to/old/Everywhere.Linux.Probes` reproduces the old misses
+for the deep, wide and logical-wrapper cases. `--case NAME` selects one scenario.
+Reports contain only synthetic data. These protocol cases do not prove toolkit
+compatibility or the complete visual attachment workflow.
+
+`--observe-focused REPORT ADDRESS X Y` observes an explicit owned window's focus
+and its tree, including failure metadata and native root geometry. It retains the
+same point/window scope check as `--observe`; use only controlled windows.
+
+Additional retained, controlled toolkit samples:
+
+```sh
+c++ tests/Everywhere.Linux.Probes/atspi_widgets.cpp -o /tmp/everywhere-atspi-widgets $(pkg-config --cflags --libs Qt6Widgets)
+QT_LINUX_ACCESSIBILITY_ALWAYS_ON=1 /tmp/everywhere-atspi-widgets
+QT_LINUX_ACCESSIBILITY_ALWAYS_ON=1 /usr/lib/qt6/bin/qml tests/Everywhere.Linux.Probes/atspi_quick.qml
+```
+
+These commands require the existing Qt development/runtime tools; no dependency
+is installed by the fixtures. Keep the Qt environment override scoped to these
+test processes. The existing GTK `demo.sh` and browser `selection.html` remain
+available. See [the Linux-only validation](../../docs/Development/LinuxAtspiValidation.md).

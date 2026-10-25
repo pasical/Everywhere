@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Input;
 using Everywhere.Automation;
@@ -19,6 +20,7 @@ public sealed class AtspiVisualElement : VisualElement
     {
         _backend = backend;
         _window = window;
+        _canReadGeometry = backend.Accessibility.Call(() => !AtspiNative.IsDetachedEmbeddedRoot(pointer));
         _pointer = backend.Accessibility.Call(() => AtspiNative.g_object_ref(pointer));
     }
 
@@ -108,16 +110,18 @@ public sealed class AtspiVisualElement : VisualElement
     protected override IVisualElementCursor CreateEnumeratorCore(VisualElementRelation relation, VisualElementQueryRequest request,
         int offset, CancellationToken cancellationToken)
     {
-        return new LinuxVisualCursor(Context, retention => Enumerate(retention, relation), request, offset, cancellationToken);
+        return new LinuxVisualCursor(Context, retention => Enumerate(retention, relation, cancellationToken), request, offset, cancellationToken);
     }
 
-    private IEnumerable<VisualElement> Enumerate(VisualElementRetention retention, VisualElementRelation relation)
+    private IEnumerable<VisualElement> Enumerate(VisualElementRetention retention, VisualElementRelation relation, CancellationToken cancellationToken)
     {
         if (relation == VisualElementRelation.Child)
         {
             var count = _backend.Accessibility.Call(() => AtspiNative.Count(_pointer));
+            var deadline = Stopwatch.StartNew();
             for (var index = 0; index < count; index++)
             {
+                CheckRelationBudget(index, deadline, cancellationToken);
                 var pointer = _backend.Accessibility.Call(() => AtspiNative.Child(_pointer, index));
                 if (pointer == 0)
                     continue;
@@ -126,6 +130,9 @@ public sealed class AtspiVisualElement : VisualElement
                     yield return GetChild(retention, pointer);
                 }
                 finally { _backend.Accessibility.Release(pointer); }
+                // The next MoveNext owns a fresh time slice; time spent by the
+                // caller observing other nodes must not consume this native call's budget.
+                deadline.Restart();
             }
             yield break;
         }
@@ -145,8 +152,11 @@ public sealed class AtspiVisualElement : VisualElement
             var position = _backend.Accessibility.Call(() => AtspiNative.Checked(AtspiNative.atspi_accessible_get_index_in_parent(_pointer, out var error), error));
             var count = _backend.Accessibility.Call(() => AtspiNative.Count(parent));
             var step = relation == VisualElementRelation.PreviousSibling ? -1 : 1;
+            var deadline = Stopwatch.StartNew();
+            var candidates = 0;
             for (var index = position + step; index >= 0 && index < count; index += step)
             {
+                CheckRelationBudget(candidates++, deadline, cancellationToken);
                 var pointer = _backend.Accessibility.Call(() => AtspiNative.Child(parent, index));
                 if (pointer == 0)
                     continue;
@@ -155,9 +165,18 @@ public sealed class AtspiVisualElement : VisualElement
                     yield return GetChild(retention, pointer);
                 }
                 finally { _backend.Accessibility.Release(pointer); }
+                deadline.Restart();
             }
         }
         finally { _backend.Accessibility.Release(parent); }
+    }
+
+    private static void CheckRelationBudget(int candidates, Stopwatch deadline, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (candidates >= AtspiQueryLimits.MaximumNodes || deadline.ElapsedMilliseconds >= AtspiQueryLimits.MaximumElapsedMilliseconds)
+            throw new VisualElementProviderException(VisualElementQueryFailureKind.LimitReached,
+                "Native relation enumeration reached its candidate/time limit; the returned relation is partial.");
     }
 
     protected override void InvokeCore()
@@ -254,7 +273,7 @@ public sealed class AtspiVisualElement : VisualElement
     private AtspiVisualElement GetChild(VisualElementRetention retention, nint pointer)
     {
         var child = GetOrCreate(retention, _backend, _window, pointer);
-        if (!_canReadGeometry || _backend.Accessibility.Call(() => AtspiNative.IsDetachedEmbeddedRoot(pointer)))
+        if (!_canReadGeometry)
             child._canReadGeometry = false;
         return child;
     }
@@ -276,38 +295,35 @@ public sealed class AtspiVisualElement : VisualElement
         var set = AtspiNative.atspi_accessible_get_state_set(_pointer);
         if (set == 0)
             return VisualElementStates.None;
-        try
-        {
-            bool Has(AtspiState value) => AtspiNative.atspi_state_set_contains(set, value) != 0;
-            if (Has(AtspiState.Defunct))
-                throw new VisualElementProviderException(VisualElementQueryFailureKind.ElementUnavailable, "The accessibility object is defunct.");
-            var states = VisualElementStates.None;
-            if (!Has(AtspiState.Showing) || !Has(AtspiState.Visible))
-                states |= VisualElementStates.Offscreen;
-            if (!Has(AtspiState.Enabled) && !Has(AtspiState.Sensitive))
-                states |= VisualElementStates.Disabled;
-            if (Has(AtspiState.Focused))
-                states |= VisualElementStates.Focused;
-            if (Has(AtspiState.Selected))
-                states |= VisualElementStates.Selected;
-            if (!Has(AtspiState.Editable))
-                states |= VisualElementStates.ReadOnly;
-            if (role == "password text")
-                states |= VisualElementStates.Password;
-            return states;
-        }
+        try { return MapStates(role, state => AtspiNative.atspi_state_set_contains(set, state) != 0); }
         finally { AtspiNative.g_object_unref(set); }
+    }
+
+    private static VisualElementStates MapStates(string role, Func<AtspiState, bool> hasState)
+    {
+        if (hasState(AtspiState.Defunct))
+            throw new VisualElementProviderException(VisualElementQueryFailureKind.ElementUnavailable, "The accessibility object is defunct.");
+        var states = VisualElementStates.None;
+        if (!hasState(AtspiState.Showing) || !hasState(AtspiState.Visible)) states |= VisualElementStates.Offscreen;
+        if (!hasState(AtspiState.Enabled) && !hasState(AtspiState.Sensitive)) states |= VisualElementStates.Disabled;
+        if (hasState(AtspiState.Focused)) states |= VisualElementStates.Focused;
+        if (hasState(AtspiState.Selected)) states |= VisualElementStates.Selected;
+        // Non-editable containers are not read-only values. Fabricating ReadOnly
+        // keeps empty wrappers in the shared projection and spends its node budget.
+        if (hasState(AtspiState.ReadOnly)) states |= VisualElementStates.ReadOnly;
+        if (role == "password text") states |= VisualElementStates.Password;
+        return states;
     }
 
     private static VisualElementType TypeFor(string role)
     {
         return role switch
         {
-        // The compositor owns TopLevel; its provider frame is the child container.
-        "frame" or "window" => VisualElementType.Panel,
+            // The compositor owns TopLevel; its provider frame is the child container.
+            "frame" or "window" => VisualElementType.Panel,
             "push button" or "button" => VisualElementType.Button,
             "text" or "entry" or "password text" => VisualElementType.TextEdit,
-            "label" or "static" => VisualElementType.Label,
+            "label" or "static" or "paragraph" => VisualElementType.Label,
             "document web" or "document text" or "document frame" => VisualElementType.Document,
             "check box" or "toggle button" => VisualElementType.CheckBox,
             "radio button" => VisualElementType.RadioButton,
@@ -315,7 +331,16 @@ public sealed class AtspiVisualElement : VisualElement
             "list" => VisualElementType.ListView,
             "list item" => VisualElementType.ListViewItem,
             "menu" or "menu bar" => VisualElementType.Menu,
-            "menu item" or "check menu item" => VisualElementType.MenuItem,
+            "menu item" or "check menu item" or "radio menu item" => VisualElementType.MenuItem,
+            "tree" => VisualElementType.TreeView,
+            "tree item" => VisualElementType.TreeViewItem,
+            "tree table" => VisualElementType.DataGrid,
+            "heading" => VisualElementType.Header,
+            "column header" or "row header" or "table column header" or "table row header" => VisualElementType.HeaderItem,
+            "progress bar" => VisualElementType.ProgressBar,
+            "spin button" => VisualElementType.Spinner,
+            "tool bar" => VisualElementType.ToolBar,
+            "status bar" => VisualElementType.StatusBar,
             "table" => VisualElementType.Table,
             "table row" => VisualElementType.TableRow,
             "table cell" => VisualElementType.DataGridItem,

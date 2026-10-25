@@ -17,6 +17,8 @@ public static partial class AtspiNative
     [LibraryImport(Library)]
     public static partial nint atspi_get_desktop(int index);
     [LibraryImport(Library)]
+    public static partial void atspi_accessible_clear_cache(nint item);
+    [LibraryImport(Library)]
     public static partial nint atspi_accessible_get_name(nint item, out nint error);
     [LibraryImport(Library)]
     public static partial nint atspi_accessible_get_role_name(nint item, out nint error);
@@ -113,6 +115,15 @@ public static partial class AtspiNative
     public static string Role(nint item) => String(atspi_accessible_get_role_name(item, out var error), error);
     public static int Pid(nint item) => Checked(atspi_accessible_get_process_id(item, out var error), error);
 
+    /// <summary>Reads one native state while keeping the temporary state-set reference scoped.</summary>
+    public static bool HasState(nint item, AtspiState state)
+    {
+        var states = atspi_accessible_get_state_set(item);
+        if (states == 0) return false;
+        try { return atspi_state_set_contains(states, state) != 0; }
+        finally { g_object_unref(states); }
+    }
+
     public static void FreeEvent(nint nativeEvent) => g_boxed_free(atspi_event_get_type(), nativeEvent);
 
     /// <summary>
@@ -177,4 +188,16 @@ public enum AtspiState
     Sensitive = 24,
     Showing = 25,
     Visible = 30,
+    ManagesDescendants = 31,
+    ReadOnly = 43,
+}
+
+/// <summary>
+/// Bounds Linux native traversal independently of the shared snapshot/output policy.
+/// Time is checked between calls; libatspi also has its own per-call timeout.
+/// </summary>
+internal static class AtspiQueryLimits
+{
+    public const int MaximumNodes = 256;
+    public const int MaximumElapsedMilliseconds = 500;
 }

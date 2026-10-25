@@ -13,141 +13,197 @@ partial class HyprlandVisualElementBackend
     {
         return Accessibility.Call(() =>
         {
-            var selected = root;
-            try
+            using var search = new AccessibleSearch(root);
+            // Chromium enables its renderer tree when an assistive client requests attributes.
+            var attributes = AtspiNative.Checked(AtspiNative.atspi_accessible_get_attributes(root, out var error), error);
+            if (attributes != 0) AtspiNative.g_hash_table_unref(attributes);
+            var selected = locator.Kind switch
             {
-                // Chromium enables its renderer tree when an assistive client
-                // requests attributes. Reading names alone leaves web content lazy.
-                var attributes = AtspiNative.Checked(AtspiNative.atspi_accessible_get_attributes(root, out var attributesError), attributesError);
-                if (attributes != 0)
-                    AtspiNative.g_hash_table_unref(attributes);
-                if (locator.Kind is VisualElementLocatorKind.Point or VisualElementLocatorKind.Pointer)
-                {
-                    // Window-relative coordinates avoid unsupported global AT-SPI coordinates on native Wayland.
-                    var local = point - window.Bounds.Position;
-                    var deadline = Stopwatch.StartNew();
-                    var visited = new HashSet<nint> { root };
-                    for (var depth = 0; depth < MaximumHitTestDepth && deadline.ElapsedMilliseconds < QueryBudgetMilliseconds; depth++)
-                    {
-                        var component = AtspiNative.atspi_accessible_get_component_iface(selected);
-                        if (component == 0)
-                            break;
-                        nint child;
-                        try
-                        {
-                            child = AtspiNative.Checked(AtspiNative.atspi_component_get_accessible_at_point(component, local.X, local.Y, AtspiCoordinates.Window, out var error), error);
-                        }
-                        finally { AtspiNative.g_object_unref(component); }
-                        if (child == selected)
-                        {
-                            AtspiNative.g_object_unref(child);
-                            child = 0;
-                        }
-                        // Some providers implement this operation as Contains(self).
-                        // Inspect bounded children rather than stopping at the window.
-                        if (child == 0)
-                            child = FindChildAtPoint(selected, new PixelPoint(local.X, local.Y), window, deadline);
-                        if (child == 0)
-                            break;
-                        if (!visited.Add(child))
-                        {
-                            AtspiNative.g_object_unref(child);
-                            break;
-                        }
-                        if (selected != root)
-                            AtspiNative.g_object_unref(selected);
-                        selected = child;
-                    }
-                }
-                else if (locator.Kind == VisualElementLocatorKind.Focused)
-                {
-                    selected = FindFocusedElement(root);
-                }
-                return AtspiVisualElement.GetOrCreate(retention, this, window, selected).Query(request);
-            }
-            finally
+                VisualElementLocatorKind.Point or VisualElementLocatorKind.Pointer =>
+                    FindElementAtPoint(root, point - window.Bounds.Position, window, search),
+                VisualElementLocatorKind.Focused => FindFocusedElement(root, search),
+                _ => root,
+            };
+            var result = AtspiVisualElement.GetOrCreate(retention, this, window, selected).Query(request);
+            if (locator.Kind is VisualElementLocatorKind.Point or VisualElementLocatorKind.Pointer &&
+                request.RequestedFields.HasFlag(VisualElementFields.Bounds) && result.Snapshot.Bounds is null)
             {
-                if (selected != root)
-                    AtspiNative.g_object_unref(selected);
-                AtspiNative.g_object_unref(root);
+                // Point selection needs a real rectangle. Keep semantic queries
+                // unchanged, but avoid replacing a usable ancestor with an unplaceable leaf.
+                for (var index = search.HitPath.Count - 2; index >= 0 && search.CanContinue; index--)
+                {
+                    var ancestor = AtspiVisualElement.GetOrCreate(retention, this, window, search.HitPath[index]).Query(request);
+                    if (ancestor.Snapshot.Bounds is not { } bounds || !bounds.Contains(point)) continue;
+                    result = ancestor;
+                    search.Report(VisualElementQueryFailureKind.Unsupported,
+                        "The deepest hit has no usable bounds; its nearest confirmed ancestor was returned.");
+                    break;
+                }
             }
+            return result.Failure is null && search.Failure is not null ? result with { Failure = search.Failure } : result;
         });
     }
 
-    private nint FindChildAtPoint(nint parent, PixelPoint point, HyprlandWindow window, Stopwatch deadline)
+    private nint FindElementAtPoint(nint root, PixelVector local, HyprlandWindow window, AccessibleSearch search)
     {
-        if (IsBoundsQueryBackedOff(window))
-            return 0;
-        var count = Math.Min(AtspiNative.Count(parent), MaximumApplicationWindows);
-        for (var index = count - 1; index >= 0 && deadline.ElapsedMilliseconds < QueryBudgetMilliseconds; index--)
+        var selected = root;
+        var point = new PixelPoint(local.X, local.Y);
+        while (search.CanContinue)
+        {
+            if (AtspiNative.IsDetachedEmbeddedRoot(selected)) break;
+            var component = AtspiNative.atspi_accessible_get_component_iface(selected);
+            nint child = 0;
+            if (component != 0)
+            {
+                try
+                {
+                    child = AtspiNative.Checked(AtspiNative.atspi_component_get_accessible_at_point(
+                        component, point.X, point.Y, AtspiCoordinates.Window, out var error), error);
+                }
+                catch (TimeoutException)
+                {
+                    search.Report(VisualElementQueryFailureKind.Timeout, "The provider's point query timed out; the last confirmed ancestor is retained.");
+                    break;
+                }
+                catch (VisualElementProviderException) { }
+                finally { AtspiNative.g_object_unref(component); }
+            }
+            if (child == selected)
+            {
+                AtspiNative.g_object_unref(child);
+                child = 0;
+            }
+            if (child != 0)
+            {
+                if (!search.Adopt(child))
+                {
+                    search.Report(VisualElementQueryFailureKind.ProviderFailure, "The provider returned a cycle while resolving the point.");
+                    break;
+                }
+            }
+            else
+            {
+                // A logical wrapper may have children without implementing Component.
+                // A provider returning itself also needs this bounded fallback.
+                child = FindChildAtPoint(selected, point, window, search);
+            }
+            if (child == 0) break;
+            selected = child;
+            search.HitPath.Add(child);
+        }
+        return selected;
+    }
+
+    private nint FindChildAtPoint(nint parent, PixelPoint point, HyprlandWindow window, AccessibleSearch search)
+    {
+        if (IsBoundsQueryBackedOff(window) || AtspiNative.HasState(parent, AtspiState.ManagesDescendants)) return 0;
+        var count = AtspiNative.Count(parent);
+        // Search from the actual end, not the end of a truncated prefix. Later
+        // children commonly contain overlapping foreground controls.
+        for (var index = count - 1; index >= 0 && search.CanContinue; index--)
         {
             var child = AtspiNative.Child(parent, index);
-            if (child == 0)
-                continue;
+            if (!search.Adopt(child)) continue;
             try
             {
                 if (AtspiNative.IsDetachedEmbeddedRoot(child)) continue;
-                if (AtspiNative.ReadExtents(child, AtspiCoordinates.Window) is { } bounds && bounds.Contains(point))
+                var bounds = AtspiNative.ReadExtents(child, AtspiCoordinates.Window);
+                if (bounds is { } rectangle)
                 {
-                    var result = child;
-                    child = 0;
-                    return result;
+                    if (rectangle.Contains(point)) return child;
+                    continue;
                 }
+                // Missing wrapper geometry does not prove that its descendants
+                // are unavailable. Only return a descendant with confirmed bounds.
+                var descendant = FindChildAtPoint(child, point, window, search);
+                if (descendant != 0) return descendant;
             }
             catch (TimeoutException)
             {
                 RecordBoundsTimeout(window);
+                search.Report(VisualElementQueryFailureKind.Timeout, "The provider's bounds query timed out; the last confirmed ancestor is retained.");
                 return 0;
             }
             catch (VisualElementProviderException) { }
-            finally { if (child != 0) AtspiNative.g_object_unref(child); }
         }
         return 0;
     }
 
-    private static nint FindFocusedElement(nint root)
+    private nint FindFocusedElement(nint root, AccessibleSearch search)
     {
+        var focused = Accessibility.GetFocusedDescendant(root);
+        if (focused != 0 && search.Adopt(focused)) return focused;
         var pending = new Queue<nint>();
-        pending.Enqueue(AtspiNative.g_object_ref(root));
-        var deadline = Stopwatch.StartNew();
-        try
+        pending.Enqueue(root);
+        while (pending.TryDequeue(out var item) && search.CanContinue)
         {
-            for (var count = 0; pending.Count > 0 && count < MaximumSearchedControls && deadline.ElapsedMilliseconds < QueryBudgetMilliseconds; count++)
+            if (AtspiNative.HasState(item, AtspiState.Focused)) return item;
+            if (AtspiNative.HasState(item, AtspiState.ManagesDescendants)) continue;
+            var count = AtspiNative.Count(item);
+            for (var index = 0; index < count && search.CanContinue; index++)
             {
-                var item = pending.Dequeue();
-                try
-                {
-                    var states = AtspiNative.atspi_accessible_get_state_set(item);
-                    if (states != 0)
-                    {
-                        try
-                        {
-                            if (AtspiNative.atspi_state_set_contains(states, AtspiState.Focused) != 0)
-                                return item == root ? root : AtspiNative.g_object_ref(item);
-                        }
-                        finally { AtspiNative.g_object_unref(states); }
-                    }
-                    var childCount = Math.Min(AtspiNative.Count(item), MaximumSearchedControls - count - pending.Count);
-                    for (var index = 0; index < childCount; index++)
-                    {
-                        var child = AtspiNative.Child(item, index);
-                        if (child != 0)
-                            pending.Enqueue(child);
-                    }
-                }
-                finally { AtspiNative.g_object_unref(item); }
+                var child = AtspiNative.Child(item, index);
+                if (search.Adopt(child)) pending.Enqueue(child);
             }
-            return root;
         }
-        finally
+        return root;
+    }
+
+    /// <summary>
+    /// Owns visited proxies until traversal ends, preventing pointer reuse from
+    /// looking like a cycle. The same node/time bounds cover direct hits and fallback.
+    /// </summary>
+    private sealed class AccessibleSearch(nint root) : IDisposable
+    {
+        public VisualElementQueryFailure? Failure { get; private set; }
+        public List<nint> HitPath { get; } = [root];
+
+        public bool CanContinue
         {
-            while (pending.TryDequeue(out var item))
-                AtspiNative.g_object_unref(item);
+            get
+            {
+                if (_deadline.ElapsedMilliseconds >= AtspiQueryLimits.MaximumElapsedMilliseconds)
+                    Report(VisualElementQueryFailureKind.LimitReached, "The accessibility search reached its elapsed-time limit.");
+                else if (_references.Count >= AtspiQueryLimits.MaximumNodes)
+                    Report(VisualElementQueryFailureKind.LimitReached, "The accessibility search reached its node limit.");
+                else return true;
+                return false;
+            }
+        }
+
+        private readonly Stopwatch _deadline = Stopwatch.StartNew();
+        private readonly HashSet<nint> _visited = [root];
+        private readonly List<nint> _references = [root];
+
+        // Takes ownership even when this proxy was already visited.
+        public bool Adopt(nint pointer)
+        {
+            if (pointer == 0) return false;
+            if (!_visited.Add(pointer))
+            {
+                AtspiNative.g_object_unref(pointer);
+                return false;
+            }
+            _references.Add(pointer);
+            return true;
+        }
+
+        public void Report(VisualElementQueryFailureKind kind, string message)
+        {
+            Failure ??= new VisualElementQueryFailure(kind, null, agentMessage: message);
+        }
+
+        public void Dispose()
+        {
+            foreach (var pointer in _references) AtspiNative.g_object_unref(pointer);
         }
     }
 
-    /// <summary>Returns an owned AT-SPI window only when PID and window identity are unambiguous.</summary>
-    public nint FindAccessibleWindow(HyprlandWindow window)
+    /// <summary>
+    /// Returns an owned AT-SPI window only when PID and window identity are unambiguous.
+    /// A requested refresh clears only this client's matching application cache.
+    /// </summary>
+    public nint FindAccessibleWindow(HyprlandWindow window, bool shouldRefresh = false)
     {
         nint desktop;
         try
@@ -159,7 +215,7 @@ partial class HyprlandVisualElementBackend
             return 0;
         try
         {
-            var applications = Math.Min(AtspiNative.Count(desktop), MaximumSearchedControls);
+            var applications = Math.Min(AtspiNative.Count(desktop), AtspiQueryLimits.MaximumNodes);
             for (var index = 0; index < applications; index++)
             {
                 var application = AtspiNative.Child(desktop, index);
@@ -169,6 +225,7 @@ partial class HyprlandVisualElementBackend
                 {
                     if (AtspiNative.Pid(application) != window.ProcessId)
                         continue;
+                    if (shouldRefresh) AtspiNative.atspi_accessible_clear_cache(application);
                     var count = AtspiNative.Count(application);
                     if (count > MaximumApplicationWindows)
                         return 0;
