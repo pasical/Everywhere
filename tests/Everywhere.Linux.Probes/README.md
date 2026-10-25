@@ -59,3 +59,15 @@ that window's tree, the production backend's hit and its geometry. Use only a
 controlled window: its tree can contain application text. This probe does not
 prove interactive selection or Chat attachment admission; check those in the
 real UI as well.
+
+## Desktop URI launcher
+
+`--launch-uri REPORT URI` exercises the production desktop-portal launcher and
+records its Boolean result. Use public or synthetic URLs only. It does not sign
+in, inspect browser tabs, or prove an OAuth callback completed.
+
+`portal.py` hosts a synthetic OpenURI service on a **private** session bus. Run
+its success, cancel and failure examples from the script's docstring after
+building the probes. Each case checks an OAuth-shaped URI containing `&`, `+`,
+percent escapes and shell metacharacters, and verifies the asynchronous response.
+No real browser is launched by those private-bus cases.

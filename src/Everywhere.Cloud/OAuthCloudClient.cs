@@ -98,7 +98,10 @@ public sealed partial class OAuthCloudClient :
 
             var authorizeUrl = flow.BuildAuthorizeUrl();
             _logger.LogDebug("Starting login flow. Auth URL: {AuthorizeUrl}", authorizeUrl);
-            await App.Launcher.LaunchUriAsync(new Uri(authorizeUrl));
+            if (!await App.Launcher.LaunchUriAsync(new Uri(authorizeUrl)))
+            {
+                throw new InvalidOperationException("The desktop could not open the authorization URL in its default browser.");
+            }
 
             // Wait for the OS protocol callback or timeout (managed entirely within the flow context)
             var code = await flow.WaitForCode();

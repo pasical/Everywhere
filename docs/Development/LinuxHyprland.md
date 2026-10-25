@@ -55,3 +55,11 @@ Universal toolkit/browser coverage, accessibility selection monitoring across to
 See [the validation record](LinuxHyprlandValidation.md) for observed results and remaining limits.
 
 See the [desktop regression and review guide](LinuxHyprlandRegression.md) for the subsequent element, wheel, placement and screenshot fixes, code navigation and toolkit limits.
+
+External web links use `LinuxDesktopLauncher` and the session OpenURI portal,
+including native-window hyperlinks and the OAuth flow. A private Everywhere XDG
+profile is not propagated to the browser launched by the desktop service. The
+connection stays alive until the portal's Response; cancellation/failure returns
+false, and login reports a launch failure instead of waiting for a callback.
+When OpenURI is absent, the BCL fallback passes one argument to `xdg-open`
+without a shell. The browser automation plugin retains its own separate profile.

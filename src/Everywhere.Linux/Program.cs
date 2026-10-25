@@ -141,7 +141,11 @@ public static class Program
         return AppBuilder.Configure(() => new App(serviceProvider))
             .UsePlatformDetect()
             .UseWaylandWithFallback()
-            .AfterPlatformServicesSetup(_ => HyprlandWindowingPlatform.Install())
+            .AfterPlatformServicesSetup(_ =>
+            {
+                BetterBclLauncher.Shared = new LinuxDesktopLauncher(BetterBclLauncher.Shared);
+                HyprlandWindowingPlatform.Install();
+            })
             .WithInterFont()
             .LogToTrace();
     }

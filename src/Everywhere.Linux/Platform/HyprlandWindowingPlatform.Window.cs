@@ -50,7 +50,14 @@ partial class HyprlandWindowingPlatform
             Inner.WindowStateChanged = state => { if (!_isWayland) _windowStateChanged?.Invoke(state); };
         }
 
-        public object? TryGetFeature(Type featureType) => featureType == typeof(HyprlandWindowState) ? _state : Inner.TryGetFeature(featureType);
+        public object? TryGetFeature(Type featureType)
+        {
+            // HyperlinkButton and TopLevel.Launcher must use the same desktop
+            // route as login and other links launched outside a native window.
+            if (featureType == typeof(Avalonia.Platform.Storage.ILauncher))
+                return Everywhere.Interop.BetterBclLauncher.Shared;
+            return featureType == typeof(HyprlandWindowState) ? _state : Inner.TryGetFeature(featureType);
+        }
         public PixelPoint Position => _isWayland ? _state.Position : Inner.Position;
         public double DesktopScaling => Inner.DesktopScaling;
         public double RenderScaling => Inner.RenderScaling;

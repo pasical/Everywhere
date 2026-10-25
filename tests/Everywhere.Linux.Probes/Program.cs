@@ -9,6 +9,7 @@ using Avalonia.Markup.Xaml.Styling;
 using Avalonia.Threading;
 using Everywhere.Automation;
 using Everywhere.Extensions;
+using Everywhere.Interop;
 using Everywhere.Linux.Automation;
 using Everywhere.Linux.Platform;
 using Everywhere.Linux.ProcessIsolation;
@@ -37,6 +38,13 @@ public static partial class Program
             return Environment.ExitCode;
         }
         Arguments = args;
+        if (args.FirstOrDefault() == "--launch-uri")
+        {
+            var launcher = new LinuxDesktopLauncher(BetterBclLauncher.Shared);
+            var isLaunched = launcher.LaunchUriAsync(new Uri(args[2])).GetAwaiter().GetResult();
+            File.WriteAllText(args[1], JsonSerializer.Serialize(new { IsLaunched = isLaunched }));
+            return isLaunched ? 0 : 1;
+        }
         if (args.FirstOrDefault() == "--observe")
         {
             try { return Observe(args); }
