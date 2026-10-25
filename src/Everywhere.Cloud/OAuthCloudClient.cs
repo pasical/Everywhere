@@ -360,7 +360,13 @@ public sealed partial class OAuthCloudClient :
         {
             LoginStatus = CloudClientLoginStatus.AutoLoggingIn;
             LastLoginErrorKey = null;
+#if LINUX
+            // Secret Service may wait for an unavailable or locked keyring. Keep the native
+            // synchronous lookup off the UI thread; resume here before updating login state.
+            await Task.Run(_session.LoadFromVault).ConfigureAwait(true);
+#else
             _session.LoadFromVault();
+#endif
 
             // Try to refresh token and restore user data silently if a refresh token exists
             if (_session.HasRefreshToken)
