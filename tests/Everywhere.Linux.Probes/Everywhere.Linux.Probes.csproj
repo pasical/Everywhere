@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><SelfContained>true</SelfContained></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Everywhere.Linux/Everywhere.Linux.csproj" />
+  </ItemGroup>
+</Project>
