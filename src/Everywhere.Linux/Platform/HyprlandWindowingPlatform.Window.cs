@@ -30,6 +30,7 @@ partial class HyprlandWindowingPlatform
         private Action? _deactivated;
         private bool _isActive;
         private bool _isApplicationResize;
+        private bool _canResize = true;
         private bool _isChangingVisibility;
         private Size? _hiddenClientSize;
 
@@ -272,7 +273,7 @@ partial class HyprlandWindowingPlatform
             // The Wayland backend labels every server configure as Layout.
             // A mapped interactive floating window resized by Hyprland must
             // leave SizeToContent, just as it does after a native user resize.
-            if (_isWayland && !_isApplicationResize && reason == WindowResizeReason.Layout &&
+            if (_isWayland && _canResize && !_isApplicationResize && reason == WindowResizeReason.Layout &&
                 _state is { IsFloating: true, CanActivate: true, Address: not null } && WindowState == WindowState.Normal)
                 reason = WindowResizeReason.User;
             _resized?.Invoke(size, reason);
@@ -287,7 +288,11 @@ partial class HyprlandWindowingPlatform
         public void SetWindowDecorations(WindowDecorations enabled) => Inner.SetWindowDecorations(enabled);
         public void SetIcon(IWindowIconImpl? icon) => Inner.SetIcon(icon);
         public void ShowTaskbarIcon(bool value) => Inner.ShowTaskbarIcon(value);
-        public void CanResize(bool value) => Inner.CanResize(value);
+        public void CanResize(bool canResize)
+        {
+            _canResize = canResize;
+            Inner.CanResize(canResize);
+        }
         public void SetCanMinimize(bool value) => Inner.SetCanMinimize(value);
         public void SetCanMaximize(bool value) => Inner.SetCanMaximize(value);
         public void BeginMoveDrag(PointerPressedEventArgs e) => Inner.BeginMoveDrag(e);

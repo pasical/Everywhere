@@ -23,6 +23,9 @@ public sealed partial class LinuxWindowHelper : IWindowHelper, IDisposable
 
     public void SetWindowProperties(Window window, WindowInputMode? inputMode = null, bool? hitTestVisible = null, WindowLayer? layer = null)
     {
+        // Some transient surfaces configure their input policy in their constructor.
+        // Apply the same owned-window role before their first Wayland map.
+        InitializeWindow(window);
         if (inputMode is { } mode)
             window.ShowActivated = mode == WindowInputMode.Normal;
         if (hitTestVisible is { } isHitTestVisible)
@@ -103,7 +106,7 @@ public sealed partial class LinuxWindowHelper : IWindowHelper, IDisposable
     {
         if (window.PlatformImpl?.TryGetFeature<HyprlandWindowState>() is not { } state)
             return;
-        if (window is ChatWindow)
+        if (window is ChatWindow or TextSelectionToolbarWindow)
             state.IsFloating = true;
         else if (window is VisualElementOverlayWindow)
         {

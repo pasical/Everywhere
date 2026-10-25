@@ -42,7 +42,9 @@ public sealed partial class HyprlandWindowState : IDisposable
     private readonly Action<PixelPoint> _positionChanged;
     private readonly Action<WindowState> _windowStateChanged;
     private readonly HyprlandConnection _connection = new();
-    private readonly string _token;
+    private readonly string _tokenPrefix;
+    private string _token = string.Empty;
+    private int _showGeneration;
     private readonly string _ruleName;
     private HyprlandWindow? _window;
     private PixelPoint _position;
@@ -53,6 +55,7 @@ public sealed partial class HyprlandWindowState : IDisposable
     private bool _hasRestoredTitle;
     private bool _hasInputPolicy;
     private bool _hasRule;
+    private (bool CanActivate, bool IsHitTestVisible)? _appliedInputPolicy;
     private nint _xDisplay;
 
     public HyprlandWindowState(IWindowImpl inner, bool isWayland, int id, Action<PixelPoint> positionChanged,
@@ -62,7 +65,7 @@ public sealed partial class HyprlandWindowState : IDisposable
         _isWayland = isWayland;
         _positionChanged = positionChanged;
         _windowStateChanged = windowStateChanged;
-        _token = $"Everywhere surface {Environment.ProcessId} {id}";
+        _tokenPrefix = $"Everywhere surface {Environment.ProcessId} {id}";
         _ruleName = $"everywhere_surface_{Environment.ProcessId}_{id}";
     }
 
@@ -97,8 +100,10 @@ public sealed partial class HyprlandWindowState : IDisposable
         _hasRestoredTitle = false;
         _hasInputPolicy = false;
         _window = null;
-        // initialTitle remains stable even after the localized visible title is restored.
-        // This gives each surface an exact identity without matching another application's title.
+        // Each map needs its own identity: an earlier surface may still appear in
+        // IPC snapshots while its asynchronous Wayland unmap is being consumed.
+        // Its initial title must never restore the visible title on the new surface.
+        _token = $"{_tokenPrefix} {++_showGeneration}";
         _inner.SetTitle(_token);
         ApplyRule();
     }
@@ -160,8 +165,12 @@ public sealed partial class HyprlandWindowState : IDisposable
     public void RefreshInputPolicy()
     {
         _hasInputPolicy = false;
-        if (_isVisible)
-            _hasInputPolicy = ApplyInputPolicy();
+        if (!_isVisible) return;
+
+        // Keep compositor focus rules coherent with the native pointer region when
+        // a passive effect or interactive toolbar changes its input policy.
+        if (_appliedInputPolicy != (CanActivate, IsHitTestVisible)) ApplyRule();
+        _hasInputPolicy = ApplyInputPolicy();
     }
 
     public void Dispose()
@@ -186,16 +195,22 @@ public sealed partial class HyprlandWindowState : IDisposable
 
     private void ApplyRule()
     {
-        if (!IsFloating && CanActivate && IsHitTestVisible)
+        if (!_hasRule && !IsFloating && CanActivate && IsHitTestVisible)
+        {
+            _appliedInputPolicy = (CanActivate, IsHitTestVisible);
             return;
+        }
         // Keep owned cloaking instantaneous so a fade cannot enter captured pixels.
-        var effects = "float=true,no_anim=true";
+        // Hyprland's no_focus also prevents normal pointer targeting. Clickable
+        // palettes suppress initial focus, while only passive effects forbid focus.
+        var noFocus = CanActivate || IsHitTestVisible ? "false" : "true";
+        var noInitialFocus = CanActivate ? "false" : "true";
+        var effects = $"float=true,no_anim=true,no_focus={noFocus},no_initial_focus={noInitialFocus}";
         if (_fixedBounds is { } bounds)
             effects += FormattableString.Invariant($",move={{{bounds.X},{bounds.Y}}},size={{{bounds.Width},{bounds.Height}}},rounding=0,border_size=0,no_blur=true,no_shadow=true,no_anim=true,render_unfocused=true");
-        if (!CanActivate)
-            effects += ",no_focus=true,no_initial_focus=true";
         _connection.ExecuteLua($"_G.{_ruleName}=hl.window_rule({{name='{_ruleName}',match={{initial_title='^{_token}$'}},{effects}}})");
         _hasRule = true;
+        _appliedInputPolicy = (CanActivate, IsHitTestVisible);
     }
 
     private void ApplyPlacement()
