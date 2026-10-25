@@ -37,11 +37,14 @@ public sealed class HyprlandInputHostSession : IProcessRoleSession, IInputHostRp
     {
         lock (_gate)
         {
-            // Passive global mouse observation and global shortcut recording need a separate compositor capability.
-            if (_isDraining || request.CaptureId != 0 || request.MouseRegistrations.Length != 0)
+            // Recording is focused in Main's input box on Wayland. The capture lease
+            // suspends only our global bindings so the same chord can reach that window.
+            // Passive global mouse observation still requires a compositor capability.
+            if (_isDraining || request.MouseRegistrations.Length != 0)
                 return ValueTask.FromResult(new ApplyInputStateResponse { IsApplied = false });
             var executable = Environment.ProcessPath ?? throw new InvalidOperationException("Application executable is unavailable.");
-            var commands = request.KeyboardRegistrations.Select(item =>
+            var activeRegistrations = request.CaptureId == 0 ? request.KeyboardRegistrations : [];
+            var commands = activeRegistrations.Select(item =>
             {
                 var key = KeyName((Key)item.Key);
                 var modifiers = (KeyModifiers)item.Modifiers;
@@ -88,7 +91,7 @@ public sealed class HyprlandInputHostSession : IProcessRoleSession, IInputHostRp
                 end
                 """;
             _compositor.ExecuteLua(script);
-            _registrations = request.KeyboardRegistrations.Select(item => item.RegistrationId).ToHashSet();
+            _registrations = activeRegistrations.Select(item => item.RegistrationId).ToHashSet();
             return ValueTask.FromResult(new ApplyInputStateResponse { IsApplied = true });
         }
     }
@@ -207,6 +210,35 @@ public sealed class HyprlandInputHostSession : IProcessRoleSession, IInputHostRp
             Key.Escape => "Escape",
             Key.Space => "space",
             Key.Back => "BackSpace",
+            Key.Tab => "Tab",
+            Key.Delete => "Delete",
+            Key.Insert => "Insert",
+            Key.Home => "Home",
+            Key.End => "End",
+            Key.PageUp => "Prior",
+            Key.PageDown => "Next",
+            Key.CapsLock => "Caps_Lock",
+            Key.NumLock => "Num_Lock",
+            Key.Scroll => "Scroll_Lock",
+            Key.PrintScreen => "Print",
+            Key.Pause => "Pause",
+            Key.Apps => "Menu",
+            Key.Add => "KP_Add",
+            Key.Subtract => "KP_Subtract",
+            Key.Multiply => "KP_Multiply",
+            Key.Divide => "KP_Divide",
+            Key.Decimal => "KP_Decimal",
+            Key.OemPlus => "equal",
+            Key.OemMinus => "minus",
+            Key.OemComma => "comma",
+            Key.OemPeriod => "period",
+            Key.Oem1 => "semicolon",
+            Key.Oem2 => "slash",
+            Key.Oem3 => "grave",
+            Key.Oem4 => "bracketleft",
+            Key.Oem5 => "backslash",
+            Key.Oem6 => "bracketright",
+            Key.Oem7 => "apostrophe",
             Key.Left => "Left",
             Key.Right => "Right",
             Key.Up => "Up",
@@ -214,6 +246,7 @@ public sealed class HyprlandInputHostSession : IProcessRoleSession, IInputHostRp
             >= Key.A and <= Key.Z => key.ToString(),
             >= Key.D0 and <= Key.D9 => ((int)key - (int)Key.D0).ToString(CultureInfo.InvariantCulture),
             >= Key.F1 and <= Key.F24 => key.ToString(),
+            >= Key.NumPad0 and <= Key.NumPad9 => "KP_" + ((int)key - (int)Key.NumPad0).ToString(CultureInfo.InvariantCulture),
             _ => throw new NotSupportedException($"The Hyprland shortcut key {key} has no registered keysym mapping."),
         };
     }

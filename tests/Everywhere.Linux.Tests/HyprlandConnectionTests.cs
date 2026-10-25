@@ -24,8 +24,14 @@ public sealed class HyprlandConnectionTests
             Is.Not.EqualTo(ProcessRoleNames.GetApplicationActivationEndpoint(second)));
     }
 
-    [Test]
-    public async Task KeyboardShortcut_ApplyState_UsesLuaStringSyntax()
+    [TestCase(Key.E, "E")]
+    [TestCase(Key.Tab, "Tab")]
+    [TestCase(Key.Delete, "Delete")]
+    [TestCase(Key.PageDown, "Next")]
+    [TestCase(Key.NumPad7, "KP_7")]
+    [TestCase(Key.OemMinus, "minus")]
+    [TestCase(Key.OemPlus, "equal")]
+    public async Task KeyboardShortcut_ApplyState_UsesLuaStringSyntax(Key key, string keySymbol)
     {
         using var server = new CompositorEndpoint();
         var session = new HyprlandInputHostSession();
@@ -37,13 +43,13 @@ public sealed class HyprlandConnectionTests
             {
                 KeyboardRegistrations = [new InputKeyboardRegistration
                 {
-                    RegistrationId = 1, Key = (int)Key.E, Modifiers = (int)(KeyModifiers.Control | KeyModifiers.Shift)
+                    RegistrationId = 1, Key = (int)key, Modifiers = (int)(KeyModifiers.Control | KeyModifiers.Shift)
                 }],
                 MouseRegistrations = [], CaptureId = 0
             });
             await serving;
             Assert.That(response.IsApplied, Is.True);
-            Assert.That(server.Request, Does.Contain("[\"CTRL + SHIFT + E\"]=\""));
+            Assert.That(server.Request, Does.Contain("[\"CTRL + SHIFT + " + keySymbol + "\"]=\""));
             Assert.That(server.Request, Does.Not.Contain("\\u"));
             Assert.That(server.Request, Does.Not.Contain(":remove()"));
             Assert.That(server.Request, Does.Match(@"state\.commands\s*=\s*desired"));
@@ -54,6 +60,48 @@ public sealed class HyprlandConnectionTests
                 await socket.SendAsync(Encoding.UTF8.GetBytes("ok"), SocketFlags.None, token));
             await session.DisposeAsync();
             await cleanup;
+        }
+    }
+
+    [Test]
+    public async Task CaptureLease_ApplyAndRelease_PausesAndRestoresRegistrations()
+    {
+        using var server = new CompositorEndpoint();
+        var session = new HyprlandInputHostSession();
+        var registrations = typeof(HyprlandInputHostSession).GetField("_registrations",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+            ?? throw new MissingFieldException(nameof(HyprlandInputHostSession));
+        try
+        {
+            await ApplyAsync(0);
+            Assert.That(registrations.GetValue(session), Is.EquivalentTo(new ulong[] { 1 }));
+            await ApplyAsync(42);
+            Assert.That(registrations.GetValue(session), Is.Empty);
+            await ApplyAsync(0);
+            Assert.That(registrations.GetValue(session), Is.EquivalentTo(new ulong[] { 1 }));
+        }
+        finally
+        {
+            var cleanup = server.ServeAsync(async (socket, token) =>
+                await socket.SendAsync(Encoding.UTF8.GetBytes("ok"), SocketFlags.None, token));
+            await session.DisposeAsync();
+            await cleanup;
+        }
+
+        async Task ApplyAsync(ulong captureId)
+        {
+            var serving = server.ServeAsync(async (socket, token) =>
+                await socket.SendAsync(Encoding.UTF8.GetBytes("ok"), SocketFlags.None, token));
+            var response = await session.ApplyStateAsync(new ApplyInputStateRequest
+            {
+                KeyboardRegistrations = [new InputKeyboardRegistration
+                {
+                    RegistrationId = 1, Key = (int)Key.E, Modifiers = (int)(KeyModifiers.Control | KeyModifiers.Shift)
+                }],
+                MouseRegistrations = [], CaptureId = captureId
+            });
+            await serving;
+            Assert.That(response.IsApplied, Is.True);
         }
     }
 
@@ -92,7 +140,7 @@ public sealed class HyprlandConnectionTests
         await serving;
     }
 
-    private sealed class CompositorEndpoint : IDisposable
+    internal sealed class CompositorEndpoint : IDisposable
     {
         public string? Request { get; private set; }
         private readonly string _directory = Path.Combine(Path.GetTempPath(), "everywhere-ipc-" + Guid.NewGuid().ToString("N"));
