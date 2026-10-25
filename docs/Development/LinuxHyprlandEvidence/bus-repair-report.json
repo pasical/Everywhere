@@ -1,0 +1,7 @@
+{
+  "ServiceActive": "active",
+  "AdvertisedSocketExists": true,
+  "Address": "unix:path=/run/user/1000/at-spi/bus_0",
+  "ConfigurationChanged": false,
+  "RepairAuthorized": true
+}

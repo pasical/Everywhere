@@ -1,0 +1,11 @@
+{
+  "SeparateRuntimeDirectory": "/tmp/ew-qa-1000",
+  "OwnXwaylandDisplay": ":1",
+  "OutputScale": 1.75,
+  "OutputSize": [
+    3360,
+    1890
+  ],
+  "ParentRendererSettingsUnchanged": true,
+  "OwnedFixtureAndCompositorStopped": true
+}

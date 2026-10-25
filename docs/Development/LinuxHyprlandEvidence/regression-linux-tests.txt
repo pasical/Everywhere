@@ -1,0 +1,4 @@
+Test run for /home/pasical/Projects/everywhere-hyprland/tests/Everywhere.Linux.Tests/bin/Release/net10.0/Everywhere.Linux.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    18, Skipped:     0, Total:    18, Duration: 2 s - Everywhere.Linux.Tests.dll (net10.0)

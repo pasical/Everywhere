@@ -1,0 +1,13 @@
+{
+  "NativeWayland": true,
+  "Floating": true,
+  "InputTransparent": true,
+  "Clicks": [
+    1,
+    2
+  ],
+  "FocusPreserved": true,
+  "UnderlyingGeometryPreserved": true,
+  "NoSurfacesLeft": true,
+  "RenderScaling": 1.75
+}

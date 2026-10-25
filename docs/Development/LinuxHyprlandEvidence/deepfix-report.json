@@ -1,0 +1,73 @@
+{
+  "OutputScale": 1.75,
+  "ChatFloatsByDefault": true,
+  "CompositorRoundedChatVerified": 20,
+  "MainChatVisualElementAttachmentVerified": true,
+  "MainChatScreenshotAttachmentVerified": true,
+  "AttachmentEvidenceReviewed": [
+    "deepfix-element-attached-175.png",
+    "deepfix-screenshot-attached-175.png"
+  ],
+  "Screenshot": {
+    "reverse-drag": {
+      "Width": 1050,
+      "Height": 147,
+      "PixelMeanError": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "FrozenPixelsExcludeSelectionUi": true,
+      "ReverseDrag": true
+    },
+    "escape": {
+      "Cancelled": true
+    },
+    "right-click": {
+      "Cancelled": true
+    },
+    "window-mode": {
+      "Width": 3322,
+      "Height": 1852
+    },
+    "scroll-mode": {
+      "Width": 3210,
+      "Height": 1740
+    }
+  },
+  "PassiveOverlay": {
+    "Floating": true,
+    "InputTransparent": true,
+    "UnderlyingButtonClicks": [
+      1,
+      2
+    ],
+    "DidNotStealFocus": true,
+    "UnderlyingGeometryPreserved": true,
+    "NoSurfacesLeft": true
+  },
+  "ScreenshotFailure": {
+    "CaptureHelperExitCode": 71,
+    "FailureReported": true,
+    "ChatRestored": true,
+    "NoSurfacesLeft": true,
+    "MainSurvived": true
+  },
+  "AccessibilityUnavailableHandled": true,
+  "Renderer": {
+    "Backend": "XWayland",
+    "ObservedRenderScaling": 1,
+    "ObservedDesktopScaling": 1,
+    "OutputScale": 1.75,
+    "TextClarityFixed": false,
+    "NativeWaylandDependencyDecisionPending": true,
+    "NativeWaylandBridgeValidated": false
+  },
+  "PrimaryDesktopAccessibility": {
+    "AdvertisedSocketAbsent": true,
+    "ServiceRestartPendingPermission": true,
+    "PrimaryControlPickingAccepted": false
+  },
+  "NoAudioPlaybackInvoked": true,
+  "SavedDesktopConfigurationChanged": false
+}

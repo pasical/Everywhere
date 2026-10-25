@@ -1,0 +1,85 @@
+{
+  "NativeGtkTree": true,
+  "UnicodeRoundTrip": true,
+  "SemanticInvoke": true,
+  "DeepSeekFlash": false,
+  "Window": {
+    "X": 20,
+    "Y": 20,
+    "Width": 640,
+    "Height": 480,
+    "Position": {
+      "X": 20,
+      "Y": 20
+    },
+    "Size": {
+      "AspectRatio": 1.3333333333333333,
+      "Width": 640,
+      "Height": 480
+    },
+    "Right": 660,
+    "Bottom": 500,
+    "TopLeft": {
+      "X": 20,
+      "Y": 20
+    },
+    "TopRight": {
+      "X": 660,
+      "Y": 20
+    },
+    "BottomLeft": {
+      "X": 20,
+      "Y": 500
+    },
+    "BottomRight": {
+      "X": 660,
+      "Y": 500
+    },
+    "Center": {
+      "X": 340,
+      "Y": 260
+    }
+  },
+  "Button": {
+    "X": 52,
+    "Y": 152,
+    "Width": 576,
+    "Height": 34,
+    "Position": {
+      "X": 52,
+      "Y": 152
+    },
+    "Size": {
+      "AspectRatio": 16.941176470588236,
+      "Width": 576,
+      "Height": 34
+    },
+    "Right": 628,
+    "Bottom": 186,
+    "TopLeft": {
+      "X": 52,
+      "Y": 152
+    },
+    "TopRight": {
+      "X": 628,
+      "Y": 152
+    },
+    "BottomLeft": {
+      "X": 52,
+      "Y": 186
+    },
+    "BottomRight": {
+      "X": 628,
+      "Y": 186
+    },
+    "Center": {
+      "X": 340,
+      "Y": 169
+    }
+  },
+  "TargetCount": 8,
+  "PrimaryDesktop": true,
+  "FixtureFloating": true,
+  "NativeWaylandFixture": true,
+  "ServiceSocketRestored": true
+}

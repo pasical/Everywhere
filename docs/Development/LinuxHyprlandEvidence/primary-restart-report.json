@@ -1,0 +1,26 @@
+{
+  "MainPid": 963622,
+  "NativeWaylandEnabled": true,
+  "OriginalProfilePreserved": true,
+  "AuthenticatedHosts": 2,
+  "RuntimeErrors": 0,
+  "ModelCompletionRequests": 0,
+  "AccessibilitySocketExists": true,
+  "Processes": [
+    {
+      "pid": 963622,
+      "role": "main",
+      "primary": true
+    },
+    {
+      "pid": 963664,
+      "role": "--process-role=input",
+      "primary": true
+    },
+    {
+      "pid": 963665,
+      "role": "--process-role=automation",
+      "primary": true
+    }
+  ]
+}

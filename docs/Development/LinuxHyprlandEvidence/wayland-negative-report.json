@@ -1,0 +1,112 @@
+{
+  "screenshot": {
+    "Width": 900,
+    "Height": 126,
+    "PixelMeanError": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "NegativeOrigin": true
+  },
+  "window": {
+    "Id": "linux:3",
+    "Name": "Everywhere controlled fixture",
+    "ProcessId": 926615,
+    "Bounds": {
+      "X": -1269,
+      "Y": 11,
+      "Width": 1258,
+      "Height": 698,
+      "Position": {
+        "X": -1269,
+        "Y": 11
+      },
+      "Size": {
+        "AspectRatio": 1.8022922636103151,
+        "Width": 1258,
+        "Height": 698
+      },
+      "Right": -11,
+      "Bottom": 709,
+      "TopLeft": {
+        "X": -1269,
+        "Y": 11
+      },
+      "TopRight": {
+        "X": -11,
+        "Y": 11
+      },
+      "BottomLeft": {
+        "X": -1269,
+        "Y": 709
+      },
+      "BottomRight": {
+        "X": -11,
+        "Y": 709
+      },
+      "Center": {
+        "X": -640,
+        "Y": 360
+      }
+    },
+    "NativeWindow": "55AE9092A9B0"
+  },
+  "element": {
+    "Id": "linux:1",
+    "Name": "Everywhere target button",
+    "ProcessId": 926615,
+    "Bounds": {
+      "X": -1237,
+      "Y": 143,
+      "Width": 1160,
+      "Height": 24,
+      "Position": {
+        "X": -1237,
+        "Y": 143
+      },
+      "Size": {
+        "AspectRatio": 48.333333333333336,
+        "Width": 1160,
+        "Height": 24
+      },
+      "Right": -77,
+      "Bottom": 167,
+      "TopLeft": {
+        "X": -1237,
+        "Y": 143
+      },
+      "TopRight": {
+        "X": -77,
+        "Y": 143
+      },
+      "BottomLeft": {
+        "X": -1237,
+        "Y": 167
+      },
+      "BottomRight": {
+        "X": -77,
+        "Y": 167
+      },
+      "Center": {
+        "X": -657,
+        "Y": 155
+      }
+    },
+    "NativeWindow": null
+  },
+  "NativeSelectorOrigins": [
+    [
+      -1280,
+      0
+    ],
+    [
+      0,
+      0
+    ]
+  ],
+  "OutputScales": [
+    1.5,
+    1.75
+  ]
+}

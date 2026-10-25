@@ -1,0 +1,21 @@
+{
+  "originalProfileRestored": true,
+  "nativeWayland": true,
+  "floatingChat": true,
+  "chatGeometry": {
+    "at": [
+      491,
+      243
+    ],
+    "size": [
+      407,
+      605
+    ]
+  },
+  "authenticatedHosts": 2,
+  "selectorsRemaining": 0,
+  "accessibilitySocketExists": true,
+  "mainAlive": true,
+  "profile": "existing configuration/data/cache reused; no QA settings or data copied",
+  "startupWarning": "release update metadata has no compatible Linux asset; application and Hosts remain available"
+}

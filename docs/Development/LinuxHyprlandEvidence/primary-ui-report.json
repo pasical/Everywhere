@@ -1,0 +1,13 @@
+{
+  "PrimaryDesktop": true,
+  "NativeWayland": true,
+  "ChatFloating": true,
+  "SelectorCountExcludesMirror": 1,
+  "ElementMenuFlow": true,
+  "FreeScreenshotFlow": true,
+  "ChatRestored": true,
+  "TemporaryProfileUsed": true,
+  "ModelCompletionRequests": 0,
+  "RuntimeErrors": 0,
+  "OutputScale": 1.75
+}

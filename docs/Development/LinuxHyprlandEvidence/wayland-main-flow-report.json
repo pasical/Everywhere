@@ -1,0 +1,38 @@
+{
+  "NativeWayland": true,
+  "ChatFloating": true,
+  "ResizedContentVerified": [
+    640,
+    480
+  ],
+  "FullOutputEffectsObserved": [
+    {
+      "title": "Everywhere surface 940800 6",
+      "floating": true,
+      "xwayland": false,
+      "at": [
+        0,
+        0
+      ],
+      "size": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "title": "Window",
+      "floating": true,
+      "xwayland": false,
+      "at": [
+        0,
+        0
+      ],
+      "size": [
+        1920,
+        1080
+      ]
+    }
+  ],
+  "NoSurfacesLeft": true,
+  "RuntimeErrors": 0
+}

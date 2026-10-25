@@ -1,0 +1,7 @@
+{
+  "checkedSourceFiles": 60,
+  "mismatches": [],
+  "linuxTestsPassed": 18,
+  "automationTestsPassed": 152,
+  "testMode": "existing Release build, --no-build --no-restore"
+}

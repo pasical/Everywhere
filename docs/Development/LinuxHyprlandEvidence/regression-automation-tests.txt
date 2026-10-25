@@ -1,0 +1,4 @@
+Test run for /home/pasical/Projects/everywhere-hyprland/tests/Everywhere.Automation.Tests/bin/Release/net10.0/Everywhere.Automation.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   152, Skipped:     0, Total:   152, Duration: 4 s - Everywhere.Automation.Tests.dll (net10.0)

@@ -1,0 +1,517 @@
+{
+  "Renderer": {
+    "Ready": true,
+    "DesktopScaling": 1,
+    "RenderScaling": 1.75,
+    "Position": {
+      "X": 0,
+      "Y": 0
+    },
+    "Width": 1920,
+    "Height": 1080,
+    "Screens": [
+      {
+        "DisplayName": "EVERYWHERE-TEST",
+        "Bounds": {
+          "X": 0,
+          "Y": 0,
+          "Width": 1920,
+          "Height": 1080,
+          "Position": {
+            "X": 0,
+            "Y": 0
+          },
+          "Size": {
+            "AspectRatio": 1.7777777777777777,
+            "Width": 1920,
+            "Height": 1080
+          },
+          "Right": 1920,
+          "Bottom": 1080,
+          "TopLeft": {
+            "X": 0,
+            "Y": 0
+          },
+          "TopRight": {
+            "X": 1920,
+            "Y": 0
+          },
+          "BottomLeft": {
+            "X": 0,
+            "Y": 1080
+          },
+          "BottomRight": {
+            "X": 1920,
+            "Y": 1080
+          },
+          "Center": {
+            "X": 960,
+            "Y": 540
+          }
+        },
+        "Scaling": 1
+      }
+    ]
+  },
+  "PrimaryRenderer": {
+    "Ready": true,
+    "DesktopScaling": 1,
+    "RenderScaling": 1.75,
+    "Position": {
+      "X": 0,
+      "Y": 0
+    },
+    "Width": 2194,
+    "Height": 1234,
+    "Screens": [
+      {
+        "DisplayName": "HDMI-A-1",
+        "Bounds": {
+          "X": 0,
+          "Y": 0,
+          "Width": 2194,
+          "Height": 1234,
+          "Position": {
+            "X": 0,
+            "Y": 0
+          },
+          "Size": {
+            "AspectRatio": 1.7779578606158832,
+            "Width": 2194,
+            "Height": 1234
+          },
+          "Right": 2194,
+          "Bottom": 1234,
+          "TopLeft": {
+            "X": 0,
+            "Y": 0
+          },
+          "TopRight": {
+            "X": 2194,
+            "Y": 0
+          },
+          "BottomLeft": {
+            "X": 0,
+            "Y": 1234
+          },
+          "BottomRight": {
+            "X": 2194,
+            "Y": 1234
+          },
+          "Center": {
+            "X": 1097,
+            "Y": 617
+          }
+        },
+        "Scaling": 1
+      }
+    ]
+  },
+  "PrimaryAccessibility": {
+    "NativeGtkTree": true,
+    "UnicodeRoundTrip": true,
+    "SemanticInvoke": true,
+    "DeepSeekFlash": false,
+    "Window": {
+      "X": 20,
+      "Y": 20,
+      "Width": 640,
+      "Height": 480,
+      "Position": {
+        "X": 20,
+        "Y": 20
+      },
+      "Size": {
+        "AspectRatio": 1.3333333333333333,
+        "Width": 640,
+        "Height": 480
+      },
+      "Right": 660,
+      "Bottom": 500,
+      "TopLeft": {
+        "X": 20,
+        "Y": 20
+      },
+      "TopRight": {
+        "X": 660,
+        "Y": 20
+      },
+      "BottomLeft": {
+        "X": 20,
+        "Y": 500
+      },
+      "BottomRight": {
+        "X": 660,
+        "Y": 500
+      },
+      "Center": {
+        "X": 340,
+        "Y": 260
+      }
+    },
+    "Button": {
+      "X": 52,
+      "Y": 152,
+      "Width": 576,
+      "Height": 34,
+      "Position": {
+        "X": 52,
+        "Y": 152
+      },
+      "Size": {
+        "AspectRatio": 16.941176470588236,
+        "Width": 576,
+        "Height": 34
+      },
+      "Right": 628,
+      "Bottom": 186,
+      "TopLeft": {
+        "X": 52,
+        "Y": 152
+      },
+      "TopRight": {
+        "X": 628,
+        "Y": 152
+      },
+      "BottomLeft": {
+        "X": 52,
+        "Y": 186
+      },
+      "BottomRight": {
+        "X": 628,
+        "Y": 186
+      },
+      "Center": {
+        "X": 340,
+        "Y": 169
+      }
+    },
+    "TargetCount": 8,
+    "PrimaryDesktop": true,
+    "FixtureFloating": true,
+    "NativeWaylandFixture": true,
+    "ServiceSocketRestored": true
+  },
+  "PrimaryUI": {
+    "PrimaryDesktop": true,
+    "NativeWayland": true,
+    "ChatFloating": true,
+    "SelectorCountExcludesMirror": 1,
+    "ElementMenuFlow": true,
+    "FreeScreenshotFlow": true,
+    "ChatRestored": true,
+    "TemporaryProfileUsed": true,
+    "ModelCompletionRequests": 0,
+    "RuntimeErrors": 0,
+    "OutputScale": 1.75
+  },
+  "MainFlow": {
+    "NativeWayland": true,
+    "ChatFloating": true,
+    "ResizedContentVerified": [
+      640,
+      480
+    ],
+    "FullOutputEffectsObserved": [
+      {
+        "title": "Everywhere surface 940800 6",
+        "floating": true,
+        "xwayland": false,
+        "at": [
+          0,
+          0
+        ],
+        "size": [
+          1920,
+          1080
+        ]
+      },
+      {
+        "title": "Window",
+        "floating": true,
+        "xwayland": false,
+        "at": [
+          0,
+          0
+        ],
+        "size": [
+          1920,
+          1080
+        ]
+      }
+    ],
+    "NoSurfacesLeft": true,
+    "RuntimeErrors": 0
+  },
+  "PassiveOverlay": {
+    "NativeWayland": true,
+    "Floating": true,
+    "InputTransparent": true,
+    "Clicks": [
+      1,
+      2
+    ],
+    "FocusPreserved": true,
+    "UnderlyingGeometryPreserved": true,
+    "NoSurfacesLeft": true,
+    "RenderScaling": 1.75
+  },
+  "Screenshots": {
+    "reverse-drag": {
+      "Width": 1050,
+      "Height": 147,
+      "PixelMeanError": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "FrozenPixelsExcludeSelectionUi": true,
+      "ReverseDrag": true
+    },
+    "escape": {
+      "Cancelled": true
+    },
+    "right-click": {
+      "Cancelled": true
+    },
+    "window-mode": {
+      "Width": 3322,
+      "Height": 1852
+    },
+    "scroll-mode": {
+      "Width": 3322,
+      "Height": 1852
+    }
+  },
+  "NegativeOrigin": {
+    "screenshot": {
+      "Width": 900,
+      "Height": 126,
+      "PixelMeanError": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "NegativeOrigin": true
+    },
+    "window": {
+      "Id": "linux:3",
+      "Name": "Everywhere controlled fixture",
+      "ProcessId": 926615,
+      "Bounds": {
+        "X": -1269,
+        "Y": 11,
+        "Width": 1258,
+        "Height": 698,
+        "Position": {
+          "X": -1269,
+          "Y": 11
+        },
+        "Size": {
+          "AspectRatio": 1.8022922636103151,
+          "Width": 1258,
+          "Height": 698
+        },
+        "Right": -11,
+        "Bottom": 709,
+        "TopLeft": {
+          "X": -1269,
+          "Y": 11
+        },
+        "TopRight": {
+          "X": -11,
+          "Y": 11
+        },
+        "BottomLeft": {
+          "X": -1269,
+          "Y": 709
+        },
+        "BottomRight": {
+          "X": -11,
+          "Y": 709
+        },
+        "Center": {
+          "X": -640,
+          "Y": 360
+        }
+      },
+      "NativeWindow": "55AE9092A9B0"
+    },
+    "element": {
+      "Id": "linux:1",
+      "Name": "Everywhere target button",
+      "ProcessId": 926615,
+      "Bounds": {
+        "X": -1237,
+        "Y": 143,
+        "Width": 1160,
+        "Height": 24,
+        "Position": {
+          "X": -1237,
+          "Y": 143
+        },
+        "Size": {
+          "AspectRatio": 48.333333333333336,
+          "Width": 1160,
+          "Height": 24
+        },
+        "Right": -77,
+        "Bottom": 167,
+        "TopLeft": {
+          "X": -1237,
+          "Y": 143
+        },
+        "TopRight": {
+          "X": -77,
+          "Y": 143
+        },
+        "BottomLeft": {
+          "X": -1237,
+          "Y": 167
+        },
+        "BottomRight": {
+          "X": -77,
+          "Y": 167
+        },
+        "Center": {
+          "X": -657,
+          "Y": 155
+        }
+      },
+      "NativeWindow": null
+    },
+    "NativeSelectorOrigins": [
+      [
+        -1280,
+        0
+      ],
+      [
+        0,
+        0
+      ]
+    ],
+    "OutputScales": [
+      1.5,
+      1.75
+    ]
+  },
+  "ServiceRepair": {
+    "ServiceActive": "active",
+    "AdvertisedSocketExists": true,
+    "Address": "unix:path=/run/user/1000/at-spi/bus_0",
+    "ConfigurationChanged": false,
+    "RepairAuthorized": true
+  },
+  "Lifecycle": {
+    "freshStartup": true,
+    "realKeyboardShortcut": "CTRL+SHIFT+E",
+    "chatFloatsByDefault": true,
+    "nativeWaylandRenderer": true,
+    "activationAcrossPosixSessions": true,
+    "inputHostCrashRecovery": true,
+    "chatPositionRetainedAfterHideShow": true,
+    "sameChordForeignBindingPreserved": true,
+    "hostStopAndBindingCleanup": true,
+    "native": "{\"NativeGtkTree\":true,\"UnicodeRoundTrip\":true,\"SemanticInvoke\":true,\"DeepSeekFlash\":false,\"Window\":{\"X\":11,\"Y\":11,\"Width\":1898,\"Height\":1058,\"Position\":{\"X\":11,\"Y\":11},\"Size\":{\"AspectRatio\":1.7939508506616257,\"Width\":1898,\"Height\":1058},\"Right\":1909,\"Bottom\":1069,\"TopLeft\":{\"X\":11,\"Y\":11},\"TopRight\":{\"X\":1909,\"Y\":11},\"BottomLeft\":{\"X\":11,\"Y\":1069},\"BottomRight\":{\"X\":1909,\"Y\":1069},\"Center\":{\"X\":960,\"Y\":540}},\"Button\":{\"X\":43,\"Y\":143,\"Width\":1834,\"Height\":34,\"Position\":{\"X\":43,\"Y\":143},\"Size\":{\"AspectRatio\":53.94117647058823,\"Width\":1834,\"Height\":34},\"Right\":1877,\"Bottom\":177,\"TopLeft\":{\"X\":43,\"Y\":143},\"TopRight\":{\"X\":1877,\"Y\":143},\"BottomLeft\":{\"X\":43,\"Y\":177},\"BottomRight\":{\"X\":1877,\"Y\":177},\"Center\":{\"X\":960,\"Y\":160}},\"TargetCount\":8}",
+    "pickerConfirm": {
+      "Id": "linux:1",
+      "Name": "Everywhere controlled fixture",
+      "ProcessId": 926615,
+      "Bounds": {
+        "X": 11,
+        "Y": 11,
+        "Width": 1898,
+        "Height": 1058,
+        "Position": {
+          "X": 11,
+          "Y": 11
+        },
+        "Size": {
+          "AspectRatio": 1.7939508506616257,
+          "Width": 1898,
+          "Height": 1058
+        },
+        "Right": 1909,
+        "Bottom": 1069,
+        "TopLeft": {
+          "X": 11,
+          "Y": 11
+        },
+        "TopRight": {
+          "X": 1909,
+          "Y": 11
+        },
+        "BottomLeft": {
+          "X": 11,
+          "Y": 1069
+        },
+        "BottomRight": {
+          "X": 1909,
+          "Y": 1069
+        },
+        "Center": {
+          "X": 960,
+          "Y": 540
+        }
+      },
+      "NativeWindow": "55AE9092A9B0"
+    },
+    "pickerCancel": {
+      "Cancelled": true
+    },
+    "underlyingTiledGeometryPreserved": true,
+    "activeOwnedBindingsLeft": 0,
+    "runtimeErrors": []
+  },
+  "IsolatedCleanup": {
+    "OwnedFixtureStopped": true,
+    "OwnedCompositorStopped": true,
+    "PrimaryCompositorAlive": true,
+    "PrimaryAccessibilitySocketPreserved": true,
+    "NoSavedDesktopConfigurationChanged": true
+  },
+  "NoAudioPlaybackInvoked": true,
+  "SavedDesktopConfigurationChanged": false,
+  "ModelCompletionRequests": 0,
+  "LinuxUnitTests": {
+    "Passed": 13,
+    "Failed": 0
+  },
+  "NativeWaylandPackage": "12.1.3",
+  "UserApprovalsCompleted": true,
+  "NativeCaptureFailure": {
+    "NativeWayland": true,
+    "PrimaryDesktop": true,
+    "CaptureHelperExit": 71,
+    "ErrorReported": true,
+    "ChatRestored": true,
+    "NoSelectorLeft": true,
+    "MainSurvived": true
+  },
+  "PrimaryRestart": {
+    "MainPid": 963622,
+    "NativeWaylandEnabled": true,
+    "OriginalProfilePreserved": true,
+    "AuthenticatedHosts": 2,
+    "RuntimeErrors": 0,
+    "ModelCompletionRequests": 0,
+    "AccessibilitySocketExists": true,
+    "Processes": [
+      {
+        "pid": 963622,
+        "role": "main",
+        "primary": true
+      },
+      {
+        "pid": 963664,
+        "role": "--process-role=input",
+        "primary": true
+      },
+      {
+        "pid": 963665,
+        "role": "--process-role=automation",
+        "primary": true
+      }
+    ]
+  }
+}

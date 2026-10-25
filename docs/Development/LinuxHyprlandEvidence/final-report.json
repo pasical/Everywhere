@@ -1,0 +1,61 @@
+{
+  "freshStartup": true,
+  "realKeyboardShortcut": "CTRL+SHIFT+E",
+  "chatFloatsByDefault": true,
+  "nativeWaylandRenderer": true,
+  "activationAcrossPosixSessions": true,
+  "inputHostCrashRecovery": true,
+  "chatPositionRetainedAfterHideShow": true,
+  "sameChordForeignBindingPreserved": true,
+  "hostStopAndBindingCleanup": true,
+  "native": "{\"NativeGtkTree\":true,\"UnicodeRoundTrip\":true,\"SemanticInvoke\":true,\"DeepSeekFlash\":false,\"Window\":{\"X\":11,\"Y\":11,\"Width\":1898,\"Height\":1058,\"Position\":{\"X\":11,\"Y\":11},\"Size\":{\"AspectRatio\":1.7939508506616257,\"Width\":1898,\"Height\":1058},\"Right\":1909,\"Bottom\":1069,\"TopLeft\":{\"X\":11,\"Y\":11},\"TopRight\":{\"X\":1909,\"Y\":11},\"BottomLeft\":{\"X\":11,\"Y\":1069},\"BottomRight\":{\"X\":1909,\"Y\":1069},\"Center\":{\"X\":960,\"Y\":540}},\"Button\":{\"X\":43,\"Y\":143,\"Width\":1834,\"Height\":34,\"Position\":{\"X\":43,\"Y\":143},\"Size\":{\"AspectRatio\":53.94117647058823,\"Width\":1834,\"Height\":34},\"Right\":1877,\"Bottom\":177,\"TopLeft\":{\"X\":43,\"Y\":143},\"TopRight\":{\"X\":1877,\"Y\":143},\"BottomLeft\":{\"X\":43,\"Y\":177},\"BottomRight\":{\"X\":1877,\"Y\":177},\"Center\":{\"X\":960,\"Y\":160}},\"TargetCount\":8}",
+  "pickerConfirm": {
+    "Id": "linux:1",
+    "Name": "Everywhere controlled fixture",
+    "ProcessId": 926615,
+    "Bounds": {
+      "X": 11,
+      "Y": 11,
+      "Width": 1898,
+      "Height": 1058,
+      "Position": {
+        "X": 11,
+        "Y": 11
+      },
+      "Size": {
+        "AspectRatio": 1.7939508506616257,
+        "Width": 1898,
+        "Height": 1058
+      },
+      "Right": 1909,
+      "Bottom": 1069,
+      "TopLeft": {
+        "X": 11,
+        "Y": 11
+      },
+      "TopRight": {
+        "X": 1909,
+        "Y": 11
+      },
+      "BottomLeft": {
+        "X": 11,
+        "Y": 1069
+      },
+      "BottomRight": {
+        "X": 1909,
+        "Y": 1069
+      },
+      "Center": {
+        "X": 960,
+        "Y": 540
+      }
+    },
+    "NativeWindow": "55AE9092A9B0"
+  },
+  "pickerCancel": {
+    "Cancelled": true
+  },
+  "underlyingTiledGeometryPreserved": true,
+  "activeOwnedBindingsLeft": 0,
+  "runtimeErrors": []
+}

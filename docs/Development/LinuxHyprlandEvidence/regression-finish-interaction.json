@@ -1,0 +1,43 @@
+{
+  "before": {
+    "at": [
+      300,
+      180
+    ],
+    "size": [
+      720,
+      520
+    ]
+  },
+  "confirmed": {
+    "at": [
+      300,
+      180
+    ],
+    "size": [
+      720,
+      520
+    ]
+  },
+  "escapeCancelled": {
+    "at": [
+      300,
+      180
+    ],
+    "size": [
+      720,
+      520
+    ]
+  },
+  "rightCancelled": {
+    "at": [
+      300,
+      180
+    ],
+    "size": [
+      720,
+      520
+    ]
+  },
+  "selectorsRemaining": 0
+}

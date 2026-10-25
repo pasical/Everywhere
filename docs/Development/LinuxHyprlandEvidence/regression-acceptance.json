@@ -1,0 +1,92 @@
+{
+  "geometryCycles": [
+    {
+      "at": [
+        300,
+        180
+      ],
+      "size": [
+        720,
+        520
+      ]
+    },
+    {
+      "at": [
+        300,
+        180
+      ],
+      "size": [
+        720,
+        520
+      ]
+    },
+    {
+      "at": [
+        300,
+        180
+      ],
+      "size": [
+        720,
+        520
+      ]
+    },
+    {
+      "at": [
+        300,
+        180
+      ],
+      "size": [
+        720,
+        520
+      ]
+    },
+    {
+      "at": [
+        300,
+        180
+      ],
+      "size": [
+        720,
+        520
+      ]
+    }
+  ],
+  "screenshot": {
+    "size": [
+      1050,
+      147
+    ],
+    "meanPixelDifference": [
+      0.6759637188208617,
+      0.6770651117589893,
+      0.6835892452218982
+    ],
+    "identical": false,
+    "before": {
+      "at": [
+        300,
+        180
+      ],
+      "size": [
+        720,
+        520
+      ]
+    },
+    "after": {
+      "at": [
+        300,
+        180
+      ],
+      "size": [
+        720,
+        520
+      ]
+    }
+  },
+  "piliplus": {
+    "semanticTreeCharacters": 4034,
+    "searchPresent": true,
+    "videoMetadataPresent": true,
+    "embeddedGeometry": "unsupported"
+  }
+}
