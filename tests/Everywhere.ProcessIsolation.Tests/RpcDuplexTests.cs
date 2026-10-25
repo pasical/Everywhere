@@ -85,6 +85,53 @@ public sealed class RpcDuplexTests
     }
 
     [Test]
+    public async Task Notifications_WhenFirstAwaitsReverseRequest_PreserveOrderWithoutBlockingReader()
+    {
+        await using var pair = await RpcPair.CreateAsync();
+        var reverseStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseReverse = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondFinished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var delivered = new List<int>();
+        pair.Client.RegisterRequestHandler<int, int>(0x20010, async (value, token) =>
+        {
+            reverseStarted.TrySetResult();
+            await releaseReverse.Task.WaitAsync(token);
+            return value;
+        });
+        pair.Server.RegisterNotificationHandler<int>(0x20011, async (value, token) =>
+        {
+            var response = await pair.Server.InvokeAsync<int, int>(0x20010, value, token);
+            delivered.Add(response);
+        });
+        pair.Server.RegisterNotificationHandler<int>(0x20012, (value, _) =>
+        {
+            delivered.Add(value);
+            secondFinished.TrySetResult();
+            return ValueTask.CompletedTask;
+        });
+        pair.Server.RegisterRequestHandler<int, int>(0x20013, (value, _) => ValueTask.FromResult(value));
+        pair.Start();
+
+        try
+        {
+            await pair.Client.SendNotificationAsync(0x20011, 1);
+            await reverseStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await pair.Client.SendNotificationAsync(0x20012, 2);
+            // This response is a transport barrier while the first notification is
+            // suspended. It also proves that serialization does not block the reader.
+            await pair.Client.InvokeAsync<int, int>(0x20013, 3).AsTask().WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.That(secondFinished.Task.IsCompleted, Is.False);
+        }
+        finally
+        {
+            releaseReverse.TrySetResult();
+        }
+
+        await secondFinished.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.That(delivered, Is.EqualTo(new[] { 1, 2 }));
+    }
+
+    [Test]
     public async Task InvokeAsync_WhenServerCancelsReverseRequest_CancelsClientHandler()
     {
         await using var pair = await RpcPair.CreateAsync();
