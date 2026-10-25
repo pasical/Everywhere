@@ -1,0 +1,276 @@
+﻿using System.Reflection;
+using System.Runtime.InteropServices;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Platform;
+using Everywhere.Linux.Hyprland;
+
+namespace Everywhere.Linux.Platform;
+
+/// <summary>UI-thread state for one owned surface, including compositor placement and input policy.</summary>
+public sealed partial class HyprlandWindowState : IDisposable
+{
+    public PixelPoint Position => _window?.Bounds.Position ?? _position;
+    public bool IsTopmost
+    {
+        get; set;
+    }
+    public bool IsFloating
+    {
+        get; set;
+    }
+    public bool CanActivate { get; set; } = true;
+    public bool IsHitTestVisible { get; set; } = true;
+    public string? Address => _window?.Address;
+    public WindowState? CompositorWindowState
+    {
+        get
+        {
+            if (_window is null)
+                return null;
+            return _window.Fullscreen switch
+            {
+                1 => WindowState.Maximized,
+                2 => WindowState.FullScreen,
+                _ => WindowState.Normal,
+            };
+        }
+    }
+
+    private readonly IWindowImpl _inner;
+    private readonly bool _isWayland;
+    private readonly Action<PixelPoint> _positionChanged;
+    private readonly Action<WindowState> _windowStateChanged;
+    private readonly HyprlandConnection _connection = new();
+    private readonly string _token;
+    private readonly string _ruleName;
+    private HyprlandWindow? _window;
+    private PixelPoint _position;
+    private PixelRect? _fixedBounds;
+    private Size _restoredSize;
+    private string? _title;
+    private bool _isVisible;
+    private bool _hasRestoredTitle;
+    private bool _hasInputPolicy;
+    private bool _hasRule;
+    private nint _xDisplay;
+
+    public HyprlandWindowState(IWindowImpl inner, bool isWayland, int id, Action<PixelPoint> positionChanged,
+        Action<WindowState> windowStateChanged)
+    {
+        _inner = inner;
+        _isWayland = isWayland;
+        _positionChanged = positionChanged;
+        _windowStateChanged = windowStateChanged;
+        _token = $"Everywhere surface {Environment.ProcessId} {id}";
+        _ruleName = $"everywhere_surface_{Environment.ProcessId}_{id}";
+    }
+
+    /// <summary>Sets one full-output overlay's global logical placement before it is mapped.</summary>
+    public void SetOverlayBounds(PixelRect bounds, bool isInteractive)
+    {
+        _fixedBounds = bounds;
+        _position = bounds.Position;
+        IsFloating = true;
+        IsTopmost = true;
+        CanActivate = isInteractive;
+        IsHitTestVisible = isInteractive;
+        _inner.Resize(new Size(bounds.Width, bounds.Height), WindowResizeReason.Application);
+        if (_isVisible)
+        {
+            ApplyRule();
+            ApplyPlacement();
+        }
+    }
+
+    public void SetTitle(string? title)
+    {
+        _title = title;
+        if (!_isVisible || _hasRestoredTitle)
+            _inner.SetTitle(title);
+    }
+
+    public void BeforeShow(Size restoredSize)
+    {
+        _restoredSize = restoredSize;
+        _isVisible = true;
+        _hasRestoredTitle = false;
+        _hasInputPolicy = false;
+        _window = null;
+        // initialTitle remains stable even after the localized visible title is restored.
+        // This gives each surface an exact identity without matching another application's title.
+        _inner.SetTitle(_token);
+        ApplyRule();
+    }
+
+    public void Hidden()
+    {
+        _position = Position;
+        _isVisible = false;
+        _window = null;
+    }
+
+    public void Observe(IReadOnlyList<HyprlandWindow> clients)
+    {
+        if (!_isVisible)
+            return;
+        var observed = clients.FirstOrDefault(item => item.ProcessId == Environment.ProcessId && item.InitialTitle == _token && item.IsMapped);
+        if (observed is null)
+            return;
+        var previous = Position;
+        var previousWindowState = CompositorWindowState;
+        var isFirstObservation = _window is null;
+        _window = observed;
+        if (!_hasRestoredTitle)
+        {
+            _hasRestoredTitle = true;
+            _inner.SetTitle(_title);
+        }
+        if (isFirstObservation)
+            ApplyPlacement();
+        if (isFirstObservation && IsTopmost)
+            Raise();
+        if (!_hasInputPolicy)
+            _hasInputPolicy = ApplyInputPolicy();
+        if (_isWayland && previous != Position)
+            _positionChanged(Position);
+        if (_isWayland && CompositorWindowState is { } windowState && previousWindowState != windowState)
+            _windowStateChanged(windowState);
+    }
+
+    public void Move(PixelPoint position)
+    {
+        _position = position;
+        if (_isWayland && _window is not null && IsFloating)
+            _connection.ExecuteLua(FormattableString.Invariant($"hl.dispatch(hl.dsp.window.move({{x={position.X},y={position.Y},window='address:{_window.Address}'}}))"));
+    }
+
+    public void Activate()
+    {
+        if (_window is not null && CanActivate)
+            _connection.ExecuteLua($"hl.dispatch(hl.dsp.focus({{window='address:{_window.Address}'}}))");
+    }
+
+    public void Raise()
+    {
+        if (_window is not null)
+            _connection.ExecuteLua($"hl.dispatch(hl.dsp.window.alter_zorder({{mode='top',window='address:{_window.Address}'}}))");
+    }
+
+    public void RefreshInputPolicy()
+    {
+        _hasInputPolicy = false;
+        if (_isVisible)
+            _hasInputPolicy = ApplyInputPolicy();
+    }
+
+    public void Dispose()
+    {
+        if (_hasRule)
+        {
+            try
+            {
+                _connection.ExecuteLua($"if _G.{_ruleName} then _G.{_ruleName}:set_enabled(false); _G.{_ruleName}=nil end");
+            }
+            catch (Exception exception) when (exception is System.Net.Sockets.SocketException or TimeoutException)
+            {
+                Serilog.Log.Debug(exception, "The compositor disconnected before owned window rule cleanup.");
+            }
+        }
+        if (_xDisplay != 0)
+        {
+            XCloseDisplay(_xDisplay);
+            _xDisplay = 0;
+        }
+    }
+
+    private void ApplyRule()
+    {
+        if (!IsFloating && CanActivate && IsHitTestVisible)
+            return;
+        // Keep owned cloaking instantaneous so a fade cannot enter captured pixels.
+        var effects = "float=true,no_anim=true";
+        if (_fixedBounds is { } bounds)
+            effects += FormattableString.Invariant($",move={{{bounds.X},{bounds.Y}}},size={{{bounds.Width},{bounds.Height}}},rounding=0,border_size=0,no_blur=true,no_shadow=true,no_anim=true,render_unfocused=true");
+        if (!CanActivate)
+            effects += ",no_focus=true,no_initial_focus=true";
+        _connection.ExecuteLua($"_G.{_ruleName}=hl.window_rule({{name='{_ruleName}',match={{initial_title='^{_token}$'}},{effects}}})");
+        _hasRule = true;
+    }
+
+    private void ApplyPlacement()
+    {
+        if (_window is null)
+            return;
+        if (_fixedBounds is not { } bounds)
+        {
+            // Honor Avalonia's initial/restored position and the last observed
+            // drag position instead of re-centering Chat on every uncloak.
+            if (_isWayland && IsFloating)
+                ApplyGeometry(_position, _restoredSize);
+            return;
+        }
+        // Window rule positions are output-relative; explicit compositor moves are global.
+        ApplyGeometry(bounds.Position, new Size(bounds.Width, bounds.Height));
+        Raise();
+    }
+
+    private void ApplyGeometry(PixelPoint position, Size size)
+    {
+        if (_window is null)
+            return;
+        // Hyprland centers a floating window when resizing it. Move last so
+        // that this centering cannot shift the restored top-left position.
+        _connection.ExecuteLua(FormattableString.Invariant($$"""
+            local target = 'address:{{_window.Address}}'
+            hl.dispatch(hl.dsp.window.resize({x={{size.Width}}, y={{size.Height}}, window=target}))
+            hl.dispatch(hl.dsp.window.move({x={{position.X}}, y={{position.Y}}, window=target}))
+            """));
+        // Observe() began with the provisional map geometry. Publishing that
+        // old snapshot now would move Avalonia back after the successful restore.
+        _window = _connection.Read<HyprlandWindow[]>("clients")
+            .FirstOrDefault(window => window.Address == _window.Address && window.ProcessId == Environment.ProcessId) ?? _window;
+    }
+
+    private bool ApplyInputPolicy()
+    {
+        if (_isWayland)
+        {
+            // Avalonia 12.1.3 exposes input regions for popups, but not toplevels.
+            // Invoke its UI-side generated proxy, which queues the change on the Wayland
+            // worker; never access protocol objects or worker state from the UI thread.
+            // This deliberately narrow bridge is pinned and validated with that package.
+            var proxy = _inner.GetType().GetProperty("SurfaceProxy", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.GetValue(_inner);
+            if (proxy is null)
+                return false;
+            var method = proxy.GetType().GetMethod("SetHitTestVisible", [typeof(bool)]);
+            if (method is null)
+                throw new NotSupportedException("This Wayland backend cannot make a passive Everywhere surface input-transparent.");
+            method.Invoke(proxy, [IsHitTestVisible]);
+            return true;
+        }
+        if (_inner.Handle is not { Handle: not 0 } handle)
+            return false;
+        if (_xDisplay == 0)
+            _xDisplay = XOpenDisplay(0);
+        if (_xDisplay == 0)
+            return false;
+        if (IsHitTestVisible)
+            XShapeCombineMask(_xDisplay, handle.Handle, 2, 0, 0, 0, 0);
+        else
+            XShapeCombineRectangles(_xDisplay, handle.Handle, 2, 0, 0, 0, 0, 0, 0);
+        XFlush(_xDisplay);
+        return true;
+    }
+
+    [LibraryImport("libX11.so.6")]
+    private static partial nint XOpenDisplay(nint name);
+    [LibraryImport("libX11.so.6")]
+    private static partial int XCloseDisplay(nint display);
+    [LibraryImport("libX11.so.6")]
+    private static partial int XFlush(nint display);
+    [LibraryImport("libXext.so.6")]
+    private static partial void XShapeCombineRectangles(nint display, nint window, int kind, int x, int y, nint rectangles, int count, int operation, int ordering);
+    [LibraryImport("libXext.so.6")]
+    private static partial void XShapeCombineMask(nint display, nint window, int kind, int x, int y, nint mask, int operation);
+}

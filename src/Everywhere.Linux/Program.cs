@@ -11,6 +11,13 @@ using Everywhere.Interop;
 using Everywhere.Linux.Chat.Plugins;
 using Everywhere.Linux.Common;
 using Everywhere.Linux.Interop;
+using Everywhere.Linux.Automation;
+using Everywhere.Linux.Platform;
+using Everywhere.Cloud;
+using Everywhere.ProcessIsolation.Hosting;
+using Everywhere.ProcessIsolation.Roles;
+using Everywhere.ProcessIsolation.Automation;
+using Everywhere.TextSelection;
 using Everywhere.Linux.ProcessIsolation;
 using Everywhere.ProcessIsolation.Activation;
 using Everywhere.ProcessIsolation.Watchdog;
@@ -22,29 +29,7 @@ namespace Everywhere.Linux;
 
 public static class Program
 {
-    
-    public static IServiceCollection AddWindowEventHelper(this IServiceCollection services)
-    {
-        // CheckEnv
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            throw new PlatformNotSupportedException("Fatal Error: Not Linux OS platform.");
-        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")))
-            throw new InvalidOperationException("Fatal Error: DISPLAY environment variable is not set. You should start in GUI env.");
-        var session = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE");
-        // for future use
-        // var desktop = Environment.GetEnvironmentVariable("XDG_SESSION_DESKTOP");
-        services.AddSingleton<X11WindowBackend>();
-        if (session != "x11")
-        {
-            // not x11, may be not fully supported
-            Log.Logger.Warning("Not X11 Session, Maybe not supported well");
-        }
-        services.AddSingleton<IEventHelper>(sp => sp.GetRequiredService<X11WindowBackend>());
-        services.AddSingleton<IWindowBackend>(sp => sp.GetRequiredService<X11WindowBackend>());
-        services.AddSingleton<IWindowHelper>(sp => sp.GetRequiredService<X11WindowBackend>());
-        return services;
-    }
-    
+
     [STAThread]
     public static void Main(string[] args)
     {
@@ -54,7 +39,23 @@ public static class Program
 
     private static async Task<int> RunAsync(string[] args)
     {
+        if (args is ["--hyprland-shortcut", var pipeName, var registration])
+        {
+            await HyprlandInputHostSession.RelayAsync(pipeName, registration).ConfigureAwait(false);
+            return 0;
+        }
         var peerVerifier = new LinuxNamedPipePeerVerifier();
+        if (ProcessRoleCommandLine.ParseHostsControl(args) is { } hostsControlCommand)
+            return await HostsControlRunner.RunAsync(hostsControlCommand, DirectHostsControlPlatform.Instance, peerVerifier).ConfigureAwait(false);
+        var role = ProcessRoleCommandLine.Parse(args);
+        if (role == ProcessRole.Input)
+            return await ProcessRoleHostRunner.RunAsync(role, args, peerVerifier, static () => new HyprlandInputHostSession()).ConfigureAwait(false);
+        if (role == ProcessRole.Automation)
+            return await ProcessRoleHostRunner.RunAsync(role, args, peerVerifier, static () =>
+            {
+                var backend = new HyprlandVisualElementBackend();
+                return new AutomationHostSession(backend, backend, new LinuxTextSelectionMonitorFactory(backend));
+            }).ConfigureAwait(false);
         // Retain the endpoint claim until application and DI cleanup complete.
         await using var activationServer = ApplicationActivationEntrance.TryCreateServer(args, peerVerifier);
         if (activationServer is null)
@@ -70,14 +71,17 @@ public static class Program
     {
         var serviceProvider = ServiceLocator.Build(x => x
 
-            #region Basic
+        #region Basic
 
             .AddApplicationLogging()
             .AddSingleton(activationServer)
-            .AddWindowEventHelper()
-            .AddSingleton<IVisualElementContext, VisualElementContext>()
-            .AddSingleton<IShortcutListener, ShortcutListener>()
-            .AddSingleton<INativeHelper, NativeHelper>()
+            .AddSingleton<Everywhere.ProcessIsolation.Rpc.INamedPipePeerVerifier, LinuxNamedPipePeerVerifier>()
+            .AddProcessIsolation()
+            .AddInputHostShortcutListener()
+            .AddSingleton<LinuxWindowHelper>()
+            .AddSingleton<IWindowHelper>(sp => sp.GetRequiredService<LinuxWindowHelper>())
+            .AddSingleton<IScreenSelectionService, HyprlandScreenSelectionService>()
+            .AddSingleton<INativeHelper, LinuxNativeHelper>()
             .AddSingleton<IOverlayInputWatcher, UnsupportedOverlayInputWatcher>()
             .AddSingleton<IPlatformUpdateHandler, LinuxUpdateHandler>()
             .AddSingleton<ISoftwareUpdater, SoftwareUpdater>()
@@ -86,35 +90,30 @@ public static class Program
             .ConfigureNetwork()
             .AddViewsAndViewModels()
             .AddDatabaseAndStorage()
+            .AddCloudClient()
             .AddChatEssentials()
+            .AddTextSelection()
 
-            #endregion
+        #endregion
 
-            #region Chat Plugins
+        #region Chat Plugins
 
             .AddTransient<BuiltInChatPlugin, FdFindPlugin>()
 
-            #endregion
+        #endregion
 
-            #region Chat
 
-            .AddSingleton<IKernelMixinFactory, KernelMixinFactory>()
-            .AddSingleton<IChatPluginManager, ChatPluginManager>()
-            .AddSingleton<IChatService, ChatService>()
-            .AddChatContextManager()
 
-            #endregion
-
-            #region Strategy Engine
+        #region Strategy Engine
 
             .AddStrategyEngine()
 
-            #endregion
+        #endregion
 
-            #region Initialize
+        #region Initialize
 
             .AddTransient<IAsyncInitializer, ChatWindowInitializer>()
-            .AddTransient<IAsyncInitializer, UpdaterInitializer>()
+            .AddTransient<IAsyncInitializer, SoftwareUpdaterInitializer>()
 
         #endregion
 
@@ -137,9 +136,13 @@ public static class Program
         }
     }
 
-    private static AppBuilder BuildAvaloniaApp(IServiceProvider serviceProvider) =>
-        AppBuilder.Configure(() => new App(serviceProvider))
+    private static AppBuilder BuildAvaloniaApp(IServiceProvider serviceProvider)
+    {
+        return AppBuilder.Configure(() => new App(serviceProvider))
             .UsePlatformDetect()
+            .UseWaylandWithFallback()
+            .AfterPlatformServicesSetup(_ => HyprlandWindowingPlatform.Install())
             .WithInterFont()
             .LogToTrace();
+    }
 }
