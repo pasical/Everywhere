@@ -1,0 +1,19 @@
+{
+  "matchingFiles": 14,
+  "files": {
+    "src/Everywhere.Core/Views/Configuration/KeyboardShortcutInputBox.Linux.cs": true,
+    "src/Everywhere.Core/Views/Configuration/KeyboardShortcutInputBox.axaml.cs": true,
+    "src/Everywhere.Core/Views/MainView.axaml": true,
+    "src/Everywhere.Core/Views/Windows/TransientWindow.axaml": true,
+    "src/Everywhere.Linux/Platform/HyprlandInputHostSession.cs": true,
+    "src/Everywhere.Linux/Platform/HyprlandWindowState.cs": true,
+    "src/Everywhere.Linux/Platform/HyprlandWindowingPlatform.Window.cs": true,
+    "src/Everywhere.Linux/Platform/LinuxWindowHelper.cs": true,
+    "src/Everywhere.ProcessIsolation/Rpc/RpcConnection.cs": true,
+    "tests/Everywhere.Core.Tests/Configuration/TextSelectionSettingsTests.cs": true,
+    "tests/Everywhere.Core.Tests/Views/KeyboardShortcutInputBoxTests.cs": true,
+    "tests/Everywhere.Linux.Tests/HyprlandConnectionTests.cs": true,
+    "tests/Everywhere.Linux.Tests/HyprlandWindowPolicyTests.cs": true,
+    "tests/Everywhere.ProcessIsolation.Tests/RpcDuplexTests.cs": true
+  }
+}

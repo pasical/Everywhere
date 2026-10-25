@@ -1,0 +1,22 @@
+{
+  "originalProfileRestored": true,
+  "settingsHashUnchangedBeforeRestore": true,
+  "primaryAccessibilitySocketPresent": true,
+  "primaryInputMethodRetained": true,
+  "pid": 1126607,
+  "hostsAuthenticated": 2,
+  "chat": {
+    "at": [
+      1001,
+      271
+    ],
+    "size": [
+      706,
+      752
+    ],
+    "floating": true,
+    "xwayland": false
+  },
+  "ownedInputDevicesStopped": true,
+  "ownedCompositorStopped": true
+}

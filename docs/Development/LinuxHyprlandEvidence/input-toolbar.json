@@ -1,0 +1,48 @@
+{
+  "toolbar": {
+    "at": [
+      6,
+      226
+    ],
+    "size": [
+      390,
+      62
+    ],
+    "floating": true,
+    "xwayland": false,
+    "initialTitle": "Everywhere surface 1119334 4 3"
+  },
+  "fixtureBefore": {
+    "at": [
+      11,
+      11
+    ],
+    "size": [
+      944,
+      1058
+    ]
+  },
+  "fixtureAfter": {
+    "at": [
+      11,
+      11
+    ],
+    "size": [
+      944,
+      1058
+    ]
+  },
+  "editor": {
+    "at": [
+      6,
+      226
+    ],
+    "size": [
+      390,
+      62
+    ],
+    "floating": true
+  },
+  "editorHasNativeFocus": true,
+  "editorCommittedText": "\u4f60\u597d"
+}

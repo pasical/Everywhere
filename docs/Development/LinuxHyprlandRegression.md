@@ -63,3 +63,7 @@ Registering an assistive listener allows desktop accessibility to activate toolk
 Run `tests/Everywhere.Linux.Probes/demo.sh` in the Hyprland session. It opens editable Unicode text, a named button/counter, checkbox, slider, dropdown, scrollable text and labeled color blocks, recording only synthetic values and window-relative geometry. The [demo README](../../tests/Everywhere.Linux.Probes/README.md) provides a recording sequence and an explicitly scoped production-backend observation command.
 
 The [runtime guide](LinuxHyprland.md) documents dependencies, isolated probes, backend constraints and Host control. The earlier validation contains additional isolation/recovery/negative-origin checks; those are historical evidence, not newly repeated physical-monitor tests.
+
+## Input and transient-window follow-up
+
+The [input validation guide](LinuxHyprlandInputValidation.md) records shortcut recording, RPC notification order, native Chinese input across remapping, repeated floating selection toolbars and Linux header spacing. Its evidence and test counts belong to the later follow-up, separately from the historical runs above.

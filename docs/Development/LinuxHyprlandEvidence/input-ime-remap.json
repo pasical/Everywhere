@@ -1,0 +1,30 @@
+{
+  "cycles": [
+    {
+      "cycle": 1,
+      "address": "0x55d0d79e4ad0",
+      "nativeWayland": true,
+      "activation": "Ctrl+Space",
+      "committedText": "你好",
+      "unmappedAfterwards": true
+    },
+    {
+      "cycle": 2,
+      "address": "0x55d0d77bd410",
+      "nativeWayland": true,
+      "activation": "Ctrl+Space",
+      "committedText": "你好",
+      "unmappedAfterwards": true
+    },
+    {
+      "cycle": 3,
+      "address": "0x55d0d7a72f70",
+      "nativeWayland": true,
+      "activation": "Ctrl+Space",
+      "committedText": "你好",
+      "unmappedAfterwards": true
+    }
+  ],
+  "primaryDesktopAlsoVerified": true,
+  "primaryClipboardUntouched": true
+}

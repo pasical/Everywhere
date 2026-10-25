@@ -1,0 +1,55 @@
+{
+  "cases": [
+    {
+      "modifiers": "Control",
+      "modifierKeycode": 29,
+      "savedKey": "K",
+      "globalTrigger": true
+    },
+    {
+      "modifiers": "Control",
+      "modifierKeycode": 97,
+      "savedKey": "K",
+      "globalTrigger": true
+    },
+    {
+      "modifiers": "Alt",
+      "modifierKeycode": 56,
+      "savedKey": "K",
+      "globalTrigger": true
+    },
+    {
+      "modifiers": "Alt",
+      "modifierKeycode": 100,
+      "savedKey": "K",
+      "globalTrigger": true
+    },
+    {
+      "modifiers": "Shift",
+      "modifierKeycode": 42,
+      "savedKey": "K",
+      "globalTrigger": true
+    },
+    {
+      "modifiers": "Shift",
+      "modifierKeycode": 54,
+      "savedKey": "K",
+      "globalTrigger": true
+    },
+    {
+      "modifiers": "Meta",
+      "modifierKeycode": 125,
+      "savedKey": "K",
+      "globalTrigger": true
+    },
+    {
+      "modifiers": "Meta",
+      "modifierKeycode": 126,
+      "savedKey": "K",
+      "globalTrigger": true
+    }
+  ],
+  "existingChordRecordedWithoutTrigger": true,
+  "escapePreservedSetting": true,
+  "inputHostStateFailures": 0
+}

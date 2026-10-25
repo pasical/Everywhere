@@ -1,0 +1,14 @@
+  Determining projects to restore...
+  Restored /home/pasical/Projects/everywhere-hyprland/tests/Everywhere.ProcessIsolation.Tests/Everywhere.ProcessIsolation.Tests.csproj (in 6.33 sec).
+  5 of 6 projects are up-to-date for restore.
+  Everywhere.I18N.Abstractions -> /home/pasical/Projects/everywhere-hyprland/src/Everywhere.I18N.Abstractions/bin/Release/net10.0/Everywhere.I18N.Abstractions.dll
+  Everywhere.I18N.SourceGenerator -> /home/pasical/Projects/everywhere-hyprland/src/Everywhere.I18N.SourceGenerator/bin/Release/netstandard2.0/Everywhere.I18N.SourceGenerator.dll
+  Everywhere.Abstractions -> /home/pasical/Projects/everywhere-hyprland/src/Everywhere.Abstractions/bin/Release/net10.0/Everywhere.Abstractions.dll
+  Everywhere.ProcessIsolation.SourceGenerator -> /home/pasical/Projects/everywhere-hyprland/src/Everywhere.ProcessIsolation.SourceGenerator/bin/Release/netstandard2.0/Everywhere.ProcessIsolation.SourceGenerator.dll
+  Everywhere.ProcessIsolation -> /home/pasical/Projects/everywhere-hyprland/src/Everywhere.ProcessIsolation/bin/Release/net10.0/Everywhere.ProcessIsolation.dll
+  Everywhere.ProcessIsolation.Tests -> /home/pasical/Projects/everywhere-hyprland/tests/Everywhere.ProcessIsolation.Tests/bin/Release/net10.0/Everywhere.ProcessIsolation.Tests.dll
+Test run for /home/pasical/Projects/everywhere-hyprland/tests/Everywhere.ProcessIsolation.Tests/bin/Release/net10.0/Everywhere.ProcessIsolation.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+Everywhere role=input did not acquire endpoint ownership.
+
+Passed!  - Failed:     0, Passed:    64, Skipped:     0, Total:    64, Duration: 5 s - Everywhere.ProcessIsolation.Tests.dll (net10.0)

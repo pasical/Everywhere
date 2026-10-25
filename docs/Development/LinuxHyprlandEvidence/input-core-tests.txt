@@ -1,0 +1,40 @@
+  Everywhere.Prompting -> /home/pasical/Projects/everywhere-hyprland/src/Everywhere.Prompting/bin/Release/net10.0/Everywhere.Prompting.dll
+  Connectors.MistralAI -> /home/pasical/Projects/everywhere-hyprland/3rd/semantic-kernel-patch/Connectors.MistralAI/bin/Release/net10.0/Microsoft.SemanticKernel.Connectors.MistralAI.dll
+  Connectors.Google -> /home/pasical/Projects/everywhere-hyprland/3rd/semantic-kernel-patch/Connectors.Google/bin/Release/net10.0/Microsoft.SemanticKernel.Connectors.Google.dll
+  Everywhere.Patches.Contracts -> /home/pasical/Projects/everywhere-hyprland/patches/Everywhere.Patches.Contracts/bin/Release/net10.0/Everywhere.Patches.Contracts.dll
+  Everywhere.I18N.Abstractions -> /home/pasical/Projects/everywhere-hyprland/src/Everywhere.I18N.Abstractions/bin/Release/net10.0/Everywhere.I18N.Abstractions.dll
+  ExpressionBinding.Avalonia -> /home/pasical/Projects/everywhere-hyprland/3rd/ExpressionBinding.Avalonia/src/ExpressionBinding.Avalonia/bin/Release/net10.0/ExpressionBinding.Avalonia.dll
+MinVer : warning MINVER1001: '/home/pasical/Projects/everywhere-hyprland/3rd/shad-ui/src/ShadUI' is not a valid Git working directory. Using default version 0.0.0-preview. [/home/pasical/Projects/everywhere-hyprland/3rd/shad-ui/src/ShadUI/ShadUI.csproj]
+  Everywhere.I18N.SourceGenerator -> /home/pasical/Projects/everywhere-hyprland/src/Everywhere.I18N.SourceGenerator/bin/Release/netstandard2.0/Everywhere.I18N.SourceGenerator.dll
+  ShadUI -> /home/pasical/Projects/everywhere-hyprland/3rd/shad-ui/src/ShadUI/bin/Release/net10.0/ShadUI.dll
+  Motion.Avalonia -> /home/pasical/Projects/everywhere-hyprland/3rd/Motion.Avalonia/src/Motion.Avalonia/bin/Release/net10.0/Motion.Avalonia.dll
+  Everywhere.Abstractions -> /home/pasical/Projects/everywhere-hyprland/src/Everywhere.Abstractions/bin/Release/net10.0/Everywhere.Abstractions.dll
+  Everywhere.ProcessIsolation.SourceGenerator -> /home/pasical/Projects/everywhere-hyprland/src/Everywhere.ProcessIsolation.SourceGenerator/bin/Release/netstandard2.0/Everywhere.ProcessIsolation.SourceGenerator.dll
+  Everywhere.Terminal -> /home/pasical/Projects/everywhere-hyprland/src/Everywhere.Terminal/bin/Release/net10.0/Everywhere.Terminal.dll
+  Everywhere.ProcessIsolation -> /home/pasical/Projects/everywhere-hyprland/src/Everywhere.ProcessIsolation/bin/Release/net10.0/Everywhere.ProcessIsolation.dll
+  Everywhere.Automation -> /home/pasical/Projects/everywhere-hyprland/src/Everywhere.Automation/bin/Release/net10.0/Everywhere.Automation.dll
+  Everywhere.Configuration.SourceGenerator -> /home/pasical/Projects/everywhere-hyprland/src/Everywhere.Configuration.SourceGenerator/bin/Release/netstandard2.0/Everywhere.Configuration.SourceGenerator.dll
+  Everywhere.Core -> /home/pasical/Projects/everywhere-hyprland/src/Everywhere.Core/bin/Release/net10.0/Everywhere.Core.dll
+  Everywhere.BuildTask.Patcher -> /home/pasical/Projects/everywhere-hyprland/patches/Everywhere.BuildTask.Patcher/bin/Release/net10.0/Everywhere.BuildTask.Patcher.dll
+  Everywhere.Patches.MicrosoftExtensionsAI.OpenAI -> /home/pasical/Projects/everywhere-hyprland/patches/Everywhere.Patches.MicrosoftExtensionsAI.OpenAI/bin/Release/net10.0/Everywhere.Patches.MicrosoftExtensionsAI.OpenAI.dll
+  Everywhere.Patches.OllamaSharp -> /home/pasical/Projects/everywhere-hyprland/patches/Everywhere.Patches.OllamaSharp/bin/Release/net10.0/Everywhere.Patches.OllamaSharp.dll
+  Everywhere.Patches.SemanticKernel -> /home/pasical/Projects/everywhere-hyprland/patches/Everywhere.Patches.SemanticKernel/bin/Release/net10.0/Everywhere.Patches.SemanticKernel.dll
+  Everywhere.Patches.Anthropic -> /home/pasical/Projects/everywhere-hyprland/patches/Everywhere.Patches.Anthropic/bin/Release/net10.0/Everywhere.Patches.Anthropic.dll
+  Everywhere.Patches.AvaloniaEdit -> /home/pasical/Projects/everywhere-hyprland/patches/Everywhere.Patches.AvaloniaEdit/bin/Release/net10.0/Everywhere.Patches.AvaloniaEdit.dll
+  ClassicDiagnostics.Avalonia -> /home/pasical/Projects/everywhere-hyprland/3rd/ClassicDiagnostics.Avalonia/src/bin/Release/net10.0/ClassicDiagnostics.Avalonia.dll
+  ================== WeaveAssemblies is running in Everywhere.Core.Tests! ==================
+  [Patcher] Intercepting: Anthropic
+  [Patcher] Up-to-date: obj/Release/net10.0/Patched/Anthropic.dll
+  [Patcher] Intercepting: AvaloniaEdit
+  [Patcher] Up-to-date: obj/Release/net10.0/Patched/AvaloniaEdit.dll
+  [Patcher] Intercepting: Microsoft.Extensions.AI.OpenAI
+  [Patcher] Up-to-date: obj/Release/net10.0/Patched/Microsoft.Extensions.AI.OpenAI.dll
+  [Patcher] Intercepting: Microsoft.SemanticKernel.Abstractions
+  [Patcher] Up-to-date: obj/Release/net10.0/Patched/Microsoft.SemanticKernel.Abstractions.dll
+  [Patcher] Intercepting: OllamaSharp
+  [Patcher] Up-to-date: obj/Release/net10.0/Patched/OllamaSharp.dll
+  Everywhere.Core.Tests -> /home/pasical/Projects/everywhere-hyprland/tests/Everywhere.Core.Tests/bin/Release/net10.0/Everywhere.Core.Tests.dll
+Test run for /home/pasical/Projects/everywhere-hyprland/tests/Everywhere.Core.Tests/bin/Release/net10.0/Everywhere.Core.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    14, Skipped:     0, Total:    14, Duration: 583 ms - Everywhere.Core.Tests.dll (net10.0)
