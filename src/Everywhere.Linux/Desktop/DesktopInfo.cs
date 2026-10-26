@@ -25,6 +25,8 @@ public enum WindowStackingOrderKind
     Compositor,
     /// <summary>Workspace, floating state and focus history estimate; overlapping windows can be ambiguous.</summary>
     FocusHistoryEstimate,
+    /// <summary>No global window stack can be observed by this backend.</summary>
+    Unavailable,
 }
 
 /// <summary>A finite observation used by one element acquisition or relation enumeration.</summary>

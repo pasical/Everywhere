@@ -5,4 +5,5 @@ public enum LinuxDesktopKind
 {
     Hyprland,
     X11,
+    PlasmaWayland,
 }

@@ -89,7 +89,7 @@ public static class Program
             .AddProcessIsolation()
             .AddSingleton<LinuxWindowHelper>()
             .AddSingleton<IWindowHelper>(sp => sp.GetRequiredService<LinuxWindowHelper>())
-            .AddSingleton<IScreenSelectionService, LinuxScreenSelectionService>()
+            .AddSingleton(sp => sp.GetRequiredService<LinuxDesktopServices>().CreateScreenSelectionService(sp.GetRequiredService<INativeHelper>()))
             .AddSingleton<INativeHelper, LinuxNativeHelper>()
             .AddSingleton(sp => sp.GetRequiredService<LinuxDesktopServices>().CreateOverlayInputWatcher())
             .AddSingleton<IPlatformUpdateHandler, LinuxUpdateHandler>()

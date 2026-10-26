@@ -13,7 +13,7 @@ PAGE = '''<!doctype html><meta charset="utf-8"><title>Everywhere · Desktop port
 <style>body{margin:24px;background:#14171d;color:#e8edf5;font:16px system-ui}h1{font-size:24px}
 main{display:grid;grid-template-columns:repeat(auto-fit,minmax(460px,1fr));gap:20px}
 section{background:#222833;border-radius:12px;padding:16px}img{width:100%;background:#101217;min-height:100px}p{color:#abb7ca}</style>
-<h1>Everywhere · Desktop port tests</h1><p>Live isolated desktops · synthetic profiles only · read-only viewer</p><main>'''
+<h1>Everywhere · Desktop port tests</h1><p>Live / last captured frame · synthetic profiles only · read-only viewer</p><main>'''
 PAGE += ''.join('<section><h2>' + title + '</h2><img src="/stream/' + key + '"></section>' for key, title in DESKTOPS.items())
 PAGE += '</main>'
 

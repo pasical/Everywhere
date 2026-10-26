@@ -50,7 +50,7 @@ for source, target in [(state, '/mnt'), (state / 'machine-id', '/etc/machine-id'
 for name in ['DBUS_SESSION_BUS_ADDRESS', 'DBUS_SYSTEM_BUS_ADDRESS', 'DISPLAY', 'WAYLAND_DISPLAY',
              'HYPRLAND_INSTANCE_SIGNATURE', 'GTK_IM_MODULE', 'QT_IM_MODULE', 'XMODIFIERS']:
     arguments += ['--unsetenv', name]
-for name, value in {'HOME': '/mnt/home', 'USER': 'tester', 'LOGNAME': 'tester',
+for name, value in {'HOME': '/mnt/home', 'USER': 'tester', 'LOGNAME': 'tester', 'SHELL': '/bin/bash',
                     'XDG_RUNTIME_DIR': '/mnt/runtime', 'XDG_CONFIG_HOME': '/mnt/config',
                     'XDG_DATA_HOME': '/mnt/data', 'XDG_CACHE_HOME': '/mnt/cache',
                     'XDG_STATE_HOME': '/mnt/state', 'LANG': 'C.UTF-8'}.items():

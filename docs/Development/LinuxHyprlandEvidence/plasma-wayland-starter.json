@@ -1,0 +1,23 @@
+{
+  "desktop": "Plasma 6.7.5 / KWin Wayland",
+  "backend": "Avalonia.Wayland.WaylandTopLevelFactory",
+  "linuxTestsPassed": 72,
+  "mainAndChatRendered": true,
+  "authenticatedHosts": 2,
+  "hostRecoveryStopped": false,
+  "ime": {
+    "engine": "Fcitx5 Pinyin via native KWin input-method-v1 / client text-input-v3",
+    "candidateWindowObserved": true,
+    "committedChineseInActualChatWindow": true,
+    "events": [
+      {
+        "WindowType": "Everywhere.Views.ChatWindow",
+        "Title": "Chat",
+        "Text": "你好",
+        "NativeHandleKind": null
+      }
+    ]
+  },
+  "testEnvironmentWorkaround": "Nonmatching KWIN_DEVICE_SKIPS_INPUT_METHOD sentinel for the nested X11 keyboard only; no production setting changed.",
+  "scope": "Ordinary windows and input only; no global state, overlays, capture, shortcuts or selection assistant."
+}

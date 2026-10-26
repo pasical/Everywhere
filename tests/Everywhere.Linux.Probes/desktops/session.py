@@ -47,11 +47,16 @@ if MODE == 'plasma-x11':
     spawn(['plasmashell'], 'shell', {'QT_IM_MODULE': ''})
     spawn(['fcitx5', '--replace'], 'ime')
 elif MODE == 'plasma-wayland':
-    os.environ.update(XDG_SESSION_TYPE='wayland', XDG_CURRENT_DESKTOP='KDE', KDE_SESSION_VERSION='6')
+    # KWin's nested X11 keyboard can have an empty device name. Its default
+    # empty skip-list entry would bypass the input method for that device.
+    # A nonmatching sentinel is confined to this lab, never production startup.
+    os.environ.update(XDG_SESSION_TYPE='wayland', XDG_CURRENT_DESKTOP='KDE', KDE_SESSION_VERSION='6',
+                      KWIN_DEVICE_SKIPS_INPUT_METHOD='everywhere-lab-no-device')
     desktop = spawn(['kwin_wayland', '--x11-display', ':90', '--width', '1280', '--height', '800',
-                     '--socket', 'wayland-test'], 'compositor')
+                     '--socket', 'wayland-test', '--inputmethod', '/usr/bin/fcitx5'], 'compositor')
     wait_for_path(Path(os.environ['XDG_RUNTIME_DIR']) / 'wayland-test', desktop)
     os.environ.update(WAYLAND_DISPLAY='wayland-test', QT_QPA_PLATFORM='wayland', GDK_BACKEND='wayland')
+    subprocess.run(['dbus-update-activation-environment', 'DISPLAY', 'WAYLAND_DISPLAY', 'XDG_SESSION_TYPE', 'XDG_CURRENT_DESKTOP'], check=True)
     spawn(['plasmashell'], 'shell', {'QT_IM_MODULE': ''})
 else:
     raise ValueError('Unconfigured desktop: ' + MODE)

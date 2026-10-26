@@ -5,6 +5,7 @@ using Everywhere.ProcessIsolation.Hosting;
 using Everywhere.ProcessIsolation.Automation;
 using Everywhere.Linux.Automation;
 using Everywhere.Linux.X11;
+using Everywhere.Linux.Wayland;
 using Everywhere.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Avalonia;
@@ -51,12 +52,26 @@ public sealed class LinuxDesktopServices
     /// <summary>Selects the supported backend for the explicitly inherited session.</summary>
     public static LinuxDesktopServices Create()
     {
-        if (DetectSession() == LinuxDesktopKind.X11)
+        var kind = DetectSession();
+        if (kind == LinuxDesktopKind.PlasmaWayland) return CreateStandardWayland(kind);
+        if (kind == LinuxDesktopKind.X11)
             return new(LinuxDesktopKind.X11, new X11CompositorStateProvider(), new X11WindowController(), new X11SilentScreenCapturer());
         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE")))
             throw new NotSupportedException("This Linux build currently requires a Hyprland session. Other Wayland backends are not implemented.");
         var compositor = new HyprlandCompositorStateProvider(new HyprlandConnection());
         return new(LinuxDesktopKind.Hyprland, compositor, new HyprlandOverlayWindowController(), new HyprlandSilentScreenCapturer(compositor));
+    }
+
+    private static LinuxDesktopServices CreateStandardWayland(LinuxDesktopKind kind)
+    {
+        return new(kind, new UnavailableWaylandStateProvider(), new StandardWaylandWindowController(), new UnavailableWaylandScreenCapturer());
+    }
+
+    /// <summary>Creates a picker only when its global state, placement and capture services exist.</summary>
+    public IScreenSelectionService CreateScreenSelectionService(INativeHelper nativeHelper)
+    {
+        return Kind is LinuxDesktopKind.Hyprland or LinuxDesktopKind.X11 ?
+            new LinuxScreenSelectionService(Compositor, Overlays, ScreenCapturer, nativeHelper) : new UnavailableWaylandSelectionService();
     }
 
     /// <summary>Installs the native UI bridge before creating any Avalonia windows.</summary>
@@ -96,6 +111,15 @@ public sealed class LinuxDesktopServices
         var display = Environment.GetEnvironmentVariable("DISPLAY");
         var waylandDisplay = Environment.GetEnvironmentVariable("WAYLAND_DISPLAY");
         if (sessionType == "x11" && !string.IsNullOrEmpty(display)) return LinuxDesktopKind.X11;
+        var desktopNames = (Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP") ?? string.Empty)
+            .Split(':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (!string.IsNullOrEmpty(waylandDisplay))
+        {
+            if (desktopNames.Contains("KDE", StringComparer.OrdinalIgnoreCase) || desktopNames.Contains("Plasma", StringComparer.OrdinalIgnoreCase))
+                return LinuxDesktopKind.PlasmaWayland;
+            if (desktopNames.Length > 0 && !desktopNames.Contains("Hyprland", StringComparer.OrdinalIgnoreCase))
+                throw new NotSupportedException("The selected Wayland desktop integration is not implemented.");
+        }
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE"))) return LinuxDesktopKind.Hyprland;
         if (string.IsNullOrEmpty(waylandDisplay) && !string.IsNullOrEmpty(display)) return LinuxDesktopKind.X11;
         throw new NotSupportedException("The selected Linux desktop integration is not implemented.");
