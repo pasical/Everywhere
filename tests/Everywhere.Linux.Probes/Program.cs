@@ -39,6 +39,8 @@ public static partial class Program
             Everywhere.Linux.Program.Main(args);
             return Environment.ExitCode;
         }
+        if (args.FirstOrDefault() == "--desktop-main") return RunDesktopMain(args);
+        if (args.FirstOrDefault() == "--desktop-state") return ReadDesktopStateAsync(args[1]).GetAwaiter().GetResult();
         Arguments = args;
         if (args.FirstOrDefault() == "--account-config") return CheckAccountConfiguration(args[1]);
         if (args.FirstOrDefault() == "--protocol-callback") return CheckProtocolCallbackAsync(args[1]).GetAwaiter().GetResult();
@@ -70,8 +72,9 @@ public static partial class Program
             throw new InvalidOperationException("The unavailable-bus probe unexpectedly connected.");
         }
         if (args.FirstOrDefault() == "--native") return RunNativeAsync(args).GetAwaiter().GetResult();
-        return AppBuilder.Configure<ProbeApplication>().UsePlatformDetect().UseWaylandWithFallback()
-            .AfterPlatformServicesSetup(_ => LinuxDesktopServices.Create().InstallWindowingPlatform())
+        var builder = AppBuilder.Configure<ProbeApplication>().UsePlatformDetect();
+        if (LinuxDesktopServices.DetectSession() != LinuxDesktopKind.X11) builder = builder.UseWaylandWithFallback();
+        return builder.AfterPlatformServicesSetup(_ => LinuxDesktopServices.Create().InstallWindowingPlatform())
             .StartWithClassicDesktopLifetime(args, ShutdownMode.OnExplicitShutdown);
     }
 

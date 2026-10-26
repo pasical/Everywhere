@@ -65,12 +65,7 @@ public static class Program
         if (role == ProcessRole.Input)
             return await ProcessRoleHostRunner.RunAsync(role, args, peerVerifier, LinuxDesktopServices.CreateInputHostSession).ConfigureAwait(false);
         if (role == ProcessRole.Automation)
-            return await ProcessRoleHostRunner.RunAsync(role, args, peerVerifier, static () =>
-            {
-                var desktop = LinuxDesktopServices.Create();
-                var backend = new LinuxVisualElementBackend(desktop.Compositor, desktop.ScreenCapturer);
-                return new AutomationHostSession(backend, backend, new LinuxTextSelectionMonitorFactory(backend));
-            }).ConfigureAwait(false);
+            return await ProcessRoleHostRunner.RunAsync(role, args, peerVerifier, static () => LinuxDesktopServices.Create().CreateAutomationHostSession()).ConfigureAwait(false);
         // Retain the endpoint claim until application and DI cleanup complete.
         await using var activationServer = ApplicationActivationEntrance.TryCreateServer(args, peerVerifier);
         if (activationServer is null)
@@ -84,7 +79,7 @@ public static class Program
 
     private static async Task<int> RunMainAsync(string[] args, ApplicationActivationServer activationServer)
     {
-        var serviceProvider = ServiceLocator.Build(x => x
+        var serviceProvider = ServiceLocator.Build(x => LinuxDesktopServices.AddServices(x)
 
         #region Basic
 
@@ -92,11 +87,6 @@ public static class Program
             .AddSingleton(activationServer)
             .AddSingleton<Everywhere.ProcessIsolation.Rpc.INamedPipePeerVerifier, LinuxNamedPipePeerVerifier>()
             .AddProcessIsolation()
-            .AddInputHostShortcutListener()
-            .AddSingleton(LinuxDesktopServices.Create())
-            .AddSingleton(sp => sp.GetRequiredService<LinuxDesktopServices>().Compositor)
-            .AddSingleton(sp => sp.GetRequiredService<LinuxDesktopServices>().Overlays)
-            .AddSingleton(sp => sp.GetRequiredService<LinuxDesktopServices>().ScreenCapturer)
             .AddSingleton<LinuxWindowHelper>()
             .AddSingleton<IWindowHelper>(sp => sp.GetRequiredService<LinuxWindowHelper>())
             .AddSingleton<IScreenSelectionService, LinuxScreenSelectionService>()
@@ -157,10 +147,10 @@ public static class Program
 
     private static AppBuilder BuildAvaloniaApp(IServiceProvider serviceProvider)
     {
-        return AppBuilder.Configure(() => new App(serviceProvider))
-            .UsePlatformDetect()
-            .UseWaylandWithFallback()
-            .AfterPlatformServicesSetup(_ =>
+        var desktop = serviceProvider.GetRequiredService<LinuxDesktopServices>();
+        var builder = AppBuilder.Configure(() => new App(serviceProvider)).UsePlatformDetect();
+        if (desktop.Kind != LinuxDesktopKind.X11) builder = builder.UseWaylandWithFallback();
+        return builder.AfterPlatformServicesSetup(_ =>
             {
                 BetterBclLauncher.Shared = new LinuxDesktopLauncher(BetterBclLauncher.Shared);
                 serviceProvider.GetRequiredService<LinuxDesktopServices>().InstallWindowingPlatform();

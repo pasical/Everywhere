@@ -1,0 +1,162 @@
+{
+  "desktop": "Plasma 6.7.5 / KWin X11",
+  "testEnvironment": "Private rootfs, namespaces, D-Bus and profile; Xvfb 1280x800",
+  "linuxTestsPassed": 69,
+  "backendLog": "X11 UI over Avalonia.X11.AvaloniaX11Platform.",
+  "authenticatedHosts": 2,
+  "hostRecoveryStopped": false,
+  "stateAndRootCapture": {
+    "Kind": "X11",
+    "StackingOrderKind": 0,
+    "Outputs": [
+      {
+        "Name": "X11-screen-0",
+        "Bounds": {
+          "X": 0,
+          "Y": 0,
+          "Width": 1280,
+          "Height": 800,
+          "Position": {
+            "X": 0,
+            "Y": 0
+          },
+          "Size": {
+            "AspectRatio": 1.6,
+            "Width": 1280,
+            "Height": 800
+          },
+          "Right": 1280,
+          "Bottom": 800,
+          "TopLeft": {
+            "X": 0,
+            "Y": 0
+          },
+          "TopRight": {
+            "X": 1280,
+            "Y": 0
+          },
+          "BottomLeft": {
+            "X": 0,
+            "Y": 800
+          },
+          "BottomRight": {
+            "X": 1280,
+            "Y": 800
+          },
+          "Center": {
+            "X": 640,
+            "Y": 400
+          }
+        },
+        "Scale": 1
+      }
+    ],
+    "Windows": [
+      {
+        "Id": "1400049",
+        "ProcessId": 238,
+        "Title": "Everywhere",
+        "ClientRect": {
+          "X": 26,
+          "Y": 32,
+          "Width": 1280,
+          "Height": 800,
+          "Position": {
+            "X": 26,
+            "Y": 32
+          },
+          "Size": {
+            "AspectRatio": 1.6,
+            "Width": 1280,
+            "Height": 800
+          },
+          "Right": 1306,
+          "Bottom": 832,
+          "TopLeft": {
+            "X": 26,
+            "Y": 32
+          },
+          "TopRight": {
+            "X": 1306,
+            "Y": 32
+          },
+          "BottomLeft": {
+            "X": 26,
+            "Y": 832
+          },
+          "BottomRight": {
+            "X": 1306,
+            "Y": 832
+          },
+          "Center": {
+            "X": 666,
+            "Y": 432
+          }
+        },
+        "FrameRect": null,
+        "OutputName": "X11-screen-0"
+      }
+    ],
+    "Active": "140001E",
+    "Pointer": {
+      "X": 640,
+      "Y": 400
+    },
+    "CaptureBounds": {
+      "X": 0,
+      "Y": 0,
+      "Width": 1280,
+      "Height": 800,
+      "Position": {
+        "X": 0,
+        "Y": 0
+      },
+      "Size": {
+        "AspectRatio": 1.6,
+        "Width": 1280,
+        "Height": 800
+      },
+      "Right": 1280,
+      "Bottom": 800,
+      "TopLeft": {
+        "X": 0,
+        "Y": 0
+      },
+      "TopRight": {
+        "X": 1280,
+        "Y": 0
+      },
+      "BottomLeft": {
+        "X": 0,
+        "Y": 800
+      },
+      "BottomRight": {
+        "X": 1280,
+        "Y": 800
+      },
+      "Center": {
+        "X": 640,
+        "Y": 400
+      }
+    },
+    "CaptureSize": {
+      "AspectRatio": 1.6,
+      "Width": 1280,
+      "Height": 800
+    }
+  },
+  "ime": {
+    "inputMethod": "Fcitx5 Pinyin",
+    "preeditAndCandidatesObserved": true,
+    "committedChineseInActualChatWindow": true,
+    "events": [
+      {
+        "WindowType": "Everywhere.Views.ChatWindow",
+        "Title": "Chat",
+        "Text": "你好"
+      }
+    ]
+  },
+  "mainAndChatRendered": true,
+  "scope": "Starter only: global shortcuts, text-selection toolbar and RandR/mixed DPI are not ported."
+}
