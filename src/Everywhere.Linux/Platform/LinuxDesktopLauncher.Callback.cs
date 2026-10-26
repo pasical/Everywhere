@@ -41,6 +41,9 @@ partial class LinuxDesktopLauncher
                 File.Move(temporary, path, overwrite: true);
             }
             finally { File.Delete(temporary); }
+
+            if (!await RefreshDesktopDatabaseAsync(applications).ConfigureAwait(false)) return false;
+
             var start = new ProcessStartInfo("xdg-mime")
             {
                 UseShellExecute = false,
@@ -65,6 +68,28 @@ partial class LinuxDesktopLauncher
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or Win32Exception or InvalidOperationException)
         {
             Log.Warning("The application callback registration failed ({FailureType}).", exception.GetType().Name);
+            return false;
+        }
+    }
+
+    private static async Task<bool> RefreshDesktopDatabaseAsync(string applications)
+    {
+        var start = new ProcessStartInfo("update-desktop-database")
+        {
+            UseShellExecute = false,
+            ArgumentList = { applications }
+        };
+        using var process = Process.Start(start);
+        if (process is null) return false;
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        try
+        {
+            await process.WaitForExitAsync(deadline.Token).ConfigureAwait(false);
+            return process.ExitCode == 0;
+        }
+        catch (OperationCanceledException)
+        {
+            if (!process.HasExited) process.Kill();
             return false;
         }
     }
