@@ -1,7 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Threading;
 using Everywhere.Interop;
-using Everywhere.Linux.Hyprland;
+using Everywhere.Linux.Desktop;
 using Everywhere.ProcessIsolation.Automation;
 using Bitmap = Avalonia.Media.Imaging.Bitmap;
 
@@ -11,11 +11,10 @@ namespace Everywhere.Linux.Platform;
 /// Starts one interactive selection at a time. Element and screenshot modes have
 /// independent histories; application-rule selection never changes either one.
 /// </summary>
-public sealed partial class HyprlandScreenSelectionService(LinuxWindowHelper windowHelper, INativeHelper nativeHelper) : IScreenSelectionService
+public sealed partial class LinuxScreenSelectionService(ICompositorStateProvider compositor, IOverlayWindowController overlays, ISilentScreenCapturer screenCapturer, INativeHelper nativeHelper) : IScreenSelectionService
 {
     private static ScreenSelectionMode _previousPickMode = ScreenSelectionMode.Element;
     private static ScreenSelectionMode _previousScreenshotMode = ScreenSelectionMode.Free;
-    private readonly HyprlandConnection _connection = new();
     private bool _isPicking;
 
     public async Task<RemoteVisualAnchor?> PickApplicationWindowAsync(IHostedVisualContext visualContext, CancellationToken cancellationToken = default)
@@ -54,7 +53,7 @@ public sealed partial class HyprlandScreenSelectionService(LinuxWindowHelper win
         _isPicking = true;
         try
         {
-            var session = new SelectionSession(windowHelper, nativeHelper, _connection, context, purpose, mode, cancellationToken);
+            var session = new SelectionSession(compositor, overlays, screenCapturer, nativeHelper, context, purpose, mode, cancellationToken);
             var result = await session.RunAsync();
             if (purpose == SelectionPurpose.Screenshot)
                 _previousScreenshotMode = session.Mode;

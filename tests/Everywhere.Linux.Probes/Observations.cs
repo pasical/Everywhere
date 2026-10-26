@@ -2,6 +2,7 @@ using System.Text.Json;
 using Avalonia;
 using Everywhere.Automation;
 using Everywhere.Linux.Automation;
+using Everywhere.Linux.Desktop;
 
 namespace Everywhere.Linux.Probes;
 
@@ -12,10 +13,11 @@ partial class Program
     private static int Observe(string[] args)
     {
         if (args.Length != 5) throw new ArgumentException("Usage: --observe REPORT ADDRESS X Y");
-        using var backend = new HyprlandVisualElementBackend();
-        var window = backend.ReadDesktop().Windows.Single(item => item.Address == args[2]);
+        var desktop = LinuxDesktopServices.Create();
+        using var backend = new LinuxVisualElementBackend(desktop.Compositor, desktop.ScreenCapturer);
+        var window = backend.ReadDesktop().Windows.Single(item => item.Id == args[2]);
         var point = new PixelPoint(int.Parse(args[3]), int.Parse(args[4]));
-        if (backend.ReadDesktop().WindowAt(point)?.Address != window.Address)
+        if (backend.ReadDesktop().WindowAt(point)?.Id != window.Id)
             throw new InvalidOperationException("The test point is outside the explicitly selected visible window.");
 
         using var context = new VisualContext();
@@ -52,16 +54,16 @@ partial class Program
         } : null;
         var report = new
         {
-            window.Address,
+            Address = window.Id,
             window.ProcessId,
-            WindowBounds = window.Bounds,
+            WindowBounds = window.SelectionBounds,
             NativeRootBounds = nativeRootBounds,
             Point = point,
             Hit = hitReport,
             Tree = VisualContextPromptBuilder.Build(context, tree),
         };
         File.WriteAllText(args[1], JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
-        Console.WriteLine(JsonSerializer.Serialize(new { window.ProcessId, Window = window.Bounds, Hit = hitReport }));
+        Console.WriteLine(JsonSerializer.Serialize(new { window.ProcessId, Window = window.SelectionBounds, Hit = hitReport }));
         return 0;
     }
 }

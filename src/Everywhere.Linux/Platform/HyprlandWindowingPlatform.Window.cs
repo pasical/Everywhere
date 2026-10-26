@@ -161,7 +161,7 @@ partial class HyprlandWindowingPlatform
         {
             if (!_state.CanActivate && !_state.IsHitTestVisible)
                 _state.SetOverlayBounds(new PixelRect(Position, new PixelSize(
-                    (int)Math.Round(ClientSize.Width * DesktopScaling), (int)Math.Round(ClientSize.Height * DesktopScaling))), false);
+                    (int)Math.Round(ClientSize.Width * DesktopScaling), (int)Math.Round(ClientSize.Height * DesktopScaling))));
             var restoredSize = _hiddenClientSize ?? ClientSize;
             _state.BeforeShow(restoredSize);
             _isChangingVisibility = true;

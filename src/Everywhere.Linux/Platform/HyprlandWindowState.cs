@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform;
@@ -74,14 +73,12 @@ public sealed partial class HyprlandWindowState : IDisposable, IWindowPresentati
     }
 
     /// <summary>Sets one full-output overlay's global logical placement before it is mapped.</summary>
-    public void SetOverlayBounds(PixelRect bounds, bool isInteractive)
+    public void SetOverlayBounds(PixelRect bounds)
     {
         _fixedBounds = bounds;
         _position = bounds.Position;
         IsFloating = true;
         IsTopmost = true;
-        CanActivate = isInteractive;
-        IsHitTestVisible = isInteractive;
         _inner.Resize(new Size(bounds.Width, bounds.Height), WindowResizeReason.Application);
         if (_isVisible)
         {
@@ -280,18 +277,7 @@ public sealed partial class HyprlandWindowState : IDisposable, IWindowPresentati
     {
         if (_isWayland)
         {
-            // Avalonia 12.1.3 exposes input regions for popups, but not toplevels.
-            // Invoke its UI-side generated proxy, which queues the change on the Wayland
-            // worker; never access protocol objects or worker state from the UI thread.
-            // This deliberately narrow bridge is pinned and validated with that package.
-            var proxy = _inner.GetType().GetProperty("SurfaceProxy", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.GetValue(_inner);
-            if (proxy is null)
-                return false;
-            var method = proxy.GetType().GetMethod("SetHitTestVisible", [typeof(bool)]);
-            if (method is null)
-                throw new NotSupportedException("This Wayland backend cannot make a passive Everywhere surface input-transparent.");
-            method.Invoke(proxy, [IsHitTestVisible]);
-            return true;
+            return WaylandSurfaceInput.TrySetHitTestVisible(_inner, IsHitTestVisible);
         }
         if (_inner.Handle is not { Handle: not 0 } handle)
             return false;

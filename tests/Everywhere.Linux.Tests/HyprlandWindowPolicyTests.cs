@@ -71,6 +71,20 @@ public sealed class HyprlandWindowPolicyTests
     }
 
     [Test]
+    public void OverlayBoundsChange_Placement_PreservesIndependentKeyboardAndPointerPolicy()
+    {
+        using var endpoint = new HyprlandConnectionTests.CompositorEndpoint();
+        using var state = new HyprlandWindowState(DispatchProxy.Create<IWindowImpl, NativeWindowStub>(), false, 1, _ => { }, _ => { })
+        {
+            CanActivate = false, IsHitTestVisible = true
+        };
+        state.SetOverlayBounds(new PixelRect(100, 200, 400, 100));
+        Assert.That(state.CanActivate, Is.False);
+        Assert.That(state.IsHitTestVisible, Is.True);
+        Assert.That(state.Position, Is.EqualTo(new PixelPoint(100, 200)));
+    }
+
+    [Test]
     public async Task RemappedWindow_ObservesPreviousSurface_KeepsNewMapIdentity()
     {
         using var endpoint = new HyprlandConnectionTests.CompositorEndpoint();

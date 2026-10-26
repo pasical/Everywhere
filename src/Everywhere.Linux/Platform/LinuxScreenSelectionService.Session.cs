@@ -7,12 +7,12 @@ using Everywhere.Common;
 using Everywhere.Extensions;
 using Everywhere.Interop;
 using Everywhere.Linux.Automation;
-using Everywhere.Linux.Hyprland;
+using Everywhere.Linux.Desktop;
 using Everywhere.ProcessIsolation.Automation;
 
 namespace Everywhere.Linux.Platform;
 
-partial class HyprlandScreenSelectionService
+partial class LinuxScreenSelectionService
 {
     /// <summary>
     /// Owns one picker lease, its output-local surfaces and its optional frozen
@@ -26,9 +26,10 @@ partial class HyprlandScreenSelectionService
             get; private set;
         }
 
-        private readonly LinuxWindowHelper _windowHelper;
+        private readonly ICompositorStateProvider _compositor;
+        private readonly IOverlayWindowController _overlaysController;
+        private readonly ISilentScreenCapturer _screenCapturer;
         private readonly INativeHelper _nativeHelper;
-        private readonly HyprlandConnection _connection;
         private readonly IHostedVisualContext _context;
         private readonly SelectionPurpose _purpose;
         private readonly ScreenSelectionMode[] _allowedModes;
@@ -47,12 +48,14 @@ partial class HyprlandScreenSelectionService
         private bool _isConfirming;
         private bool _isDisposed;
 
-        public SelectionSession(LinuxWindowHelper windowHelper, INativeHelper nativeHelper, HyprlandConnection connection,
+        public SelectionSession(ICompositorStateProvider compositor, IOverlayWindowController overlays,
+            ISilentScreenCapturer screenCapturer, INativeHelper nativeHelper,
             IHostedVisualContext context, SelectionPurpose purpose, ScreenSelectionMode mode, CancellationToken cancellationToken)
         {
-            _windowHelper = windowHelper;
+            _compositor = compositor;
+            _overlaysController = overlays;
+            _screenCapturer = screenCapturer;
             _nativeHelper = nativeHelper;
-            _connection = connection;
             _context = context;
             _purpose = purpose;
             _lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -69,12 +72,11 @@ partial class HyprlandScreenSelectionService
         {
             try
             {
-                var monitors = HyprlandDesktop.VisibleOutputs(_connection.Read<HyprlandMonitor[]>("monitors"));
-                if (monitors.Length == 0)
+                var monitors = await _compositor.GetOutputsAsync(_lifetime.Token);
+                if (monitors.Count == 0)
                     throw new NotSupportedException("The compositor has no active desktop outputs.");
                 _desktopBounds = monitors.Select(item => item.Bounds).Aggregate((left, right) => left.Union(right));
-                var pointer = _connection.Read<Dictionary<string, int>>("cursorpos");
-                _lastPoint = new PixelPoint(pointer["x"], pointer["y"]);
+                _lastPoint = await _compositor.GetGlobalCursorPositionAsync(_lifetime.Token);
                 if (_purpose == SelectionPurpose.Screenshot)
                     await FreezeOutputsAsync(monitors);
                 CreateOverlays(monitors);
@@ -90,19 +92,21 @@ partial class HyprlandScreenSelectionService
             finally { await CloseAsync(); }
         }
 
-        private async Task FreezeOutputsAsync(IEnumerable<HyprlandMonitor> monitors)
+        private async Task FreezeOutputsAsync(IEnumerable<OutputInfo> monitors)
         {
             // Freeze before mapping any selector. Confirmation crops these same
             // pixels, so the result cannot contain its mask, outline or tooltip.
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background, _lifetime.Token);
-            await _windowHelper.WaitForHiddenSurfacesAsync(_lifetime.Token);
+            await _overlaysController.WaitForHiddenSurfacesAsync(_lifetime.Token);
             foreach (var monitor in monitors)
             {
-                var capture = await LinuxScreenCapture.CaptureAsync(monitor.Bounds, _lifetime.Token);
+                var capture = await _screenCapturer.CaptureOutputAsync(monitor.Name, _lifetime.Token);
                 try
                 {
+                    if (capture.Bounds != monitor.Bounds)
+                        throw new InvalidOperationException("The output geometry changed while freezing the desktop.");
                     var bitmap = capture.ToAvaloniaBitmap() ?? throw new InvalidDataException("The output capture could not be decoded.");
-                    var density = Math.Min(monitor.Scale, (double)IVisualElementCapture.MaximumDimension / Math.Max(monitor.Bounds.Width, monitor.Bounds.Height));
+                    var density = LinuxScreenCapture.OutputDensity(monitor);
                     _frozen.Add(new FrozenOutput(monitor.Bounds, capture, bitmap, density));
                 }
                 catch
@@ -113,7 +117,7 @@ partial class HyprlandScreenSelectionService
             }
         }
 
-        private void CreateOverlays(IEnumerable<HyprlandMonitor> monitors)
+        private void CreateOverlays(IEnumerable<OutputInfo> monitors)
         {
             var probe = new Window();
             var remainingScreens = probe.Screens.All.ToList();
@@ -122,17 +126,18 @@ partial class HyprlandScreenSelectionService
             {
                 // Names are authoritative. Geometry matching supports the X11 fallback.
                 var screen = remainingScreens.FirstOrDefault(item => item.DisplayName == monitor.Name) ??
-                    remainingScreens.OrderBy(item => Math.Abs(item.Bounds.X - monitor.X) + Math.Abs(item.Bounds.Y - monitor.Y)).FirstOrDefault();
+                    remainingScreens.OrderBy(item => Math.Abs(item.Bounds.X - monitor.Bounds.X) + Math.Abs(item.Bounds.Y - monitor.Bounds.Y)).FirstOrDefault();
                 if (screen is null)
                     continue;
                 remainingScreens.Remove(screen);
-                var overlay = new PickerOverlay(_nativeHelper, new HyprlandCoordinateMap(screen.Bounds, monitor.Bounds),
+                var overlay = new PickerOverlay(_nativeHelper, new OutputCoordinateMap(screen.Bounds, monitor.Bounds),
                     screen.Scaling, _allowedModes, Mode, _purpose == SelectionPurpose.Application,
                     _frozen.FirstOrDefault(item => item.Bounds == monitor.Bounds)?.Bitmap)
                 {
                     Title = "Everywhere screen selection " + Environment.ProcessId,
                 };
-                _windowHelper.PrepareOverlay(overlay, monitor.Bounds, true);
+                _overlaysController.AttachOverlayWindow(overlay, OverlayRole.ScreenSelector);
+                _overlaysController.SetOverlayBounds(overlay, monitor.Bounds);
                 overlay.PointerMoved += (_, args) => MovePointer(overlay, args.GetPosition(overlay));
                 overlay.PointerPressed += (_, args) => PointerPressed(overlay, args);
                 overlay.PointerReleased += (_, args) => PointerReleased(overlay, args);
@@ -360,7 +365,7 @@ partial class HyprlandScreenSelectionService
                 overlay.Close();
             try
             {
-                await _windowHelper.WaitForHiddenSurfacesAsync(CancellationToken.None);
+                await _overlaysController.WaitForHiddenSurfacesAsync(CancellationToken.None);
             }
             catch (Exception exception) when (exception is OperationCanceledException or System.Net.Sockets.SocketException or TimeoutException)
             {

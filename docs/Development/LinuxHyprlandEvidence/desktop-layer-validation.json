@@ -1,0 +1,120 @@
+{
+  "date": "2026-10-26",
+  "branch": "linux-hyprland",
+  "linuxTests": {
+    "passed": 67,
+    "failed": 0
+  },
+  "source": {
+    "matchedSourceFiles": 88,
+    "allMatched": true
+  },
+  "nativeAtspi": {
+    "passed": 10,
+    "failed": 0
+  },
+  "toolkits": [
+    {
+      "toolkit": "gtk4",
+      "nativeWayland": true,
+      "semanticsAccepted": true
+    },
+    {
+      "toolkit": "qt-widgets",
+      "nativeWayland": true,
+      "semanticsAccepted": true
+    },
+    {
+      "toolkit": "qt-quick",
+      "nativeWayland": true,
+      "semanticsAccepted": true
+    }
+  ],
+  "headlessAutomationCaptureAccepted": true,
+  "browser": {
+    "nativeWayland": true,
+    "projectionCharacters": 8885,
+    "hasSyntheticWebDocument": true,
+    "usesForcedRendererAccessibility": false
+  },
+  "interaction": {
+    "passiveOverlay": {
+      "clickPassedThrough": true,
+      "underlyingFocusRetained": true
+    },
+    "screenshot": {
+      "nativeDensity": 1.75,
+      "logicalRegion": [
+        300,
+        300,
+        300,
+        150
+      ],
+      "pixelSize": [
+        525,
+        263
+      ],
+      "matchesPreOverlayPixels": true
+    },
+    "cancelledPickerAndScreenshotCleanedUp": true,
+    "elementPicker": {
+      "confirmedOriginalProcess": true,
+      "bounds": {
+        "X": 970,
+        "Y": 163,
+        "Width": 881,
+        "Height": 24,
+        "Position": {
+          "X": 970,
+          "Y": 163
+        },
+        "Size": {
+          "AspectRatio": 36.708333333333336,
+          "Width": 881,
+          "Height": 24
+        },
+        "Right": 1851,
+        "Bottom": 187,
+        "TopLeft": {
+          "X": 970,
+          "Y": 163
+        },
+        "TopRight": {
+          "X": 1851,
+          "Y": 163
+        },
+        "BottomLeft": {
+          "X": 970,
+          "Y": 187
+        },
+        "BottomRight": {
+          "X": 1851,
+          "Y": 187
+        },
+        "Center": {
+          "X": 1410,
+          "Y": 175
+        }
+      },
+      "name": "Everywhere target button"
+    },
+    "remainingSelectorWindows": 0
+  },
+  "main": {
+    "mainAlive": true,
+    "authenticatedHosts": 2,
+    "mainMappedOnWayland": true,
+    "usesDisposableProfile": true
+  },
+  "isolatedDesktopStopped": true,
+  "existingRuntimeReplaced": false,
+  "boundaries": {
+    "supportedDesktop": "Hyprland",
+    "otherDesktopsAccepted": [],
+    "hasAuthoritativeWindowStack": false,
+    "hasSeparateFrameGeometry": false,
+    "supportsPartialWaylandInputRegions": false,
+    "chromiumMixedCoordinateGeometryAccepted": false,
+    "realAccountLoginRepeated": false
+  }
+}

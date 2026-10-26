@@ -140,6 +140,29 @@ public sealed class HyprlandConnectionTests
         await serving;
     }
 
+    [Test]
+    public async Task StalledCompositor_AsyncRead_PreservesCallerCancellation()
+    {
+        using var server = new CompositorEndpoint();
+        var serving = server.ServeAsync(async (_, token) => await Task.Delay(Timeout.Infinite, token));
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+        Assert.ThrowsAsync<OperationCanceledException>(async () =>
+            await new HyprlandConnection().ReadAsync<HyprlandMonitor[]>("monitors", cancellation.Token));
+        server.Cancel();
+        await serving;
+    }
+
+    [Test]
+    public async Task StalledCompositor_AsyncRead_DistinguishesProviderDeadline()
+    {
+        using var server = new CompositorEndpoint();
+        var serving = server.ServeAsync(async (_, token) => await Task.Delay(Timeout.Infinite, token));
+        Assert.ThrowsAsync<TimeoutException>(async () =>
+            await new HyprlandConnection().ReadAsync<HyprlandMonitor[]>("monitors"));
+        server.Cancel();
+        await serving;
+    }
+
     internal sealed class CompositorEndpoint : IDisposable
     {
         public string? Request { get; private set; }

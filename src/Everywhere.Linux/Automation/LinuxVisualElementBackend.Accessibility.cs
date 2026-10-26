@@ -1,14 +1,14 @@
 ﻿using System.Diagnostics;
 using Avalonia;
 using Everywhere.Automation;
-using Everywhere.Linux.Hyprland;
+using Everywhere.Linux.Desktop;
 
 namespace Everywhere.Linux.Automation;
 
-partial class HyprlandVisualElementBackend
+partial class LinuxVisualElementBackend
 {
     /// <summary>Consumes the owned window proxy and retains only the confirmed native target.</summary>
-    private VisualElementQueryResult QueryAccessible(VisualElementRetention retention, HyprlandWindow window, nint root,
+    private VisualElementQueryResult QueryAccessible(VisualElementRetention retention, CompositorWindowInfo window, nint root,
         VisualElementLocator locator, PixelPoint point, VisualElementQueryRequest request)
     {
         return Accessibility.Call(() =>
@@ -20,7 +20,7 @@ partial class HyprlandVisualElementBackend
             var selected = locator.Kind switch
             {
                 VisualElementLocatorKind.Point or VisualElementLocatorKind.Pointer =>
-                    FindElementAtPoint(root, point - window.Bounds.Position, window, search),
+                    FindElementAtPoint(root, point - window.ClientRect.Position, window, search),
                 VisualElementLocatorKind.Focused => FindFocusedElement(root, search),
                 _ => root,
             };
@@ -44,7 +44,7 @@ partial class HyprlandVisualElementBackend
         });
     }
 
-    private nint FindElementAtPoint(nint root, PixelVector local, HyprlandWindow window, AccessibleSearch search)
+    private nint FindElementAtPoint(nint root, PixelVector local, CompositorWindowInfo window, AccessibleSearch search)
     {
         var selected = root;
         var point = new PixelPoint(local.X, local.Y);
@@ -94,7 +94,7 @@ partial class HyprlandVisualElementBackend
         return selected;
     }
 
-    private nint FindChildAtPoint(nint parent, PixelPoint point, HyprlandWindow window, AccessibleSearch search)
+    private nint FindChildAtPoint(nint parent, PixelPoint point, CompositorWindowInfo window, AccessibleSearch search)
     {
         if (IsBoundsQueryBackedOff(window) || AtspiNative.HasState(parent, AtspiState.ManagesDescendants)) return 0;
         var count = AtspiNative.Count(parent);
@@ -203,7 +203,7 @@ partial class HyprlandVisualElementBackend
     /// Returns an owned AT-SPI window only when PID and window identity are unambiguous.
     /// A requested refresh clears only this client's matching application cache.
     /// </summary>
-    public nint FindAccessibleWindow(HyprlandWindow window, bool shouldRefresh = false)
+    public nint FindAccessibleWindow(CompositorWindowInfo window, bool shouldRefresh = false)
     {
         nint desktop;
         try

@@ -12,6 +12,7 @@ using Everywhere.Linux.Chat.Plugins;
 using Everywhere.Linux.Common;
 using Everywhere.Linux.Interop;
 using Everywhere.Linux.Automation;
+using Everywhere.Linux.Desktop;
 using Everywhere.Linux.Platform;
 using Everywhere.Cloud;
 using Everywhere.ProcessIsolation.Hosting;
@@ -44,11 +45,11 @@ public static class Program
             await HyprlandInputHostSession.RelayAsync(pipeName, registration).ConfigureAwait(false);
             return 0;
         }
-        if (args is ["--hyprland-primary-selection", var selectionPipe])
+        if (args is ["--linux-primary-selection", var selectionPipe])
         {
             try
             {
-                await PrimarySelectionMonitor.RelayAsync(selectionPipe).ConfigureAwait(false);
+                await PrimarySelectionMonitor.RelayAsync(selectionPipe, LinuxDesktopServices.Create().Compositor).ConfigureAwait(false);
                 return 0;
             }
             catch (Exception exception) when (exception is IOException or TimeoutException or OperationCanceledException or InvalidOperationException)
@@ -62,11 +63,12 @@ public static class Program
             return await HostsControlRunner.RunAsync(hostsControlCommand, DirectHostsControlPlatform.Instance, peerVerifier).ConfigureAwait(false);
         var role = ProcessRoleCommandLine.Parse(args);
         if (role == ProcessRole.Input)
-            return await ProcessRoleHostRunner.RunAsync(role, args, peerVerifier, static () => new HyprlandInputHostSession()).ConfigureAwait(false);
+            return await ProcessRoleHostRunner.RunAsync(role, args, peerVerifier, LinuxDesktopServices.CreateInputHostSession).ConfigureAwait(false);
         if (role == ProcessRole.Automation)
             return await ProcessRoleHostRunner.RunAsync(role, args, peerVerifier, static () =>
             {
-                var backend = new HyprlandVisualElementBackend();
+                var desktop = LinuxDesktopServices.Create();
+                var backend = new LinuxVisualElementBackend(desktop.Compositor, desktop.ScreenCapturer);
                 return new AutomationHostSession(backend, backend, new LinuxTextSelectionMonitorFactory(backend));
             }).ConfigureAwait(false);
         // Retain the endpoint claim until application and DI cleanup complete.
@@ -91,11 +93,15 @@ public static class Program
             .AddSingleton<Everywhere.ProcessIsolation.Rpc.INamedPipePeerVerifier, LinuxNamedPipePeerVerifier>()
             .AddProcessIsolation()
             .AddInputHostShortcutListener()
+            .AddSingleton(LinuxDesktopServices.Create())
+            .AddSingleton(sp => sp.GetRequiredService<LinuxDesktopServices>().Compositor)
+            .AddSingleton(sp => sp.GetRequiredService<LinuxDesktopServices>().Overlays)
+            .AddSingleton(sp => sp.GetRequiredService<LinuxDesktopServices>().ScreenCapturer)
             .AddSingleton<LinuxWindowHelper>()
             .AddSingleton<IWindowHelper>(sp => sp.GetRequiredService<LinuxWindowHelper>())
-            .AddSingleton<IScreenSelectionService, HyprlandScreenSelectionService>()
+            .AddSingleton<IScreenSelectionService, LinuxScreenSelectionService>()
             .AddSingleton<INativeHelper, LinuxNativeHelper>()
-            .AddSingleton<IOverlayInputWatcher, HyprlandOverlayInputWatcher>()
+            .AddSingleton(sp => sp.GetRequiredService<LinuxDesktopServices>().CreateOverlayInputWatcher())
             .AddSingleton<IPlatformUpdateHandler, LinuxUpdateHandler>()
             .AddSingleton<ISoftwareUpdater, SoftwareUpdater>()
             .AddSettings()
@@ -157,7 +163,7 @@ public static class Program
             .AfterPlatformServicesSetup(_ =>
             {
                 BetterBclLauncher.Shared = new LinuxDesktopLauncher(BetterBclLauncher.Shared);
-                HyprlandWindowingPlatform.Install();
+                serviceProvider.GetRequiredService<LinuxDesktopServices>().InstallWindowingPlatform();
             })
             .WithInterFont()
             .LogToTrace();

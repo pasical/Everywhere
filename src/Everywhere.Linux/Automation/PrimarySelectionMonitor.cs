@@ -4,7 +4,7 @@ using System.IO.Pipes;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Everywhere.Linux.Hyprland;
+using Everywhere.Linux.Desktop;
 using Everywhere.Linux.ProcessIsolation;
 using Serilog;
 
@@ -45,23 +45,22 @@ public sealed class PrimarySelectionMonitor : IAsyncDisposable
     /// has no trustworthy accessible-object identity, so consumers receive text
     /// only and must recheck the captured foreground window before accepting it.
     /// </summary>
-    public static async Task RelayAsync(string pipeName)
+    public static async Task RelayAsync(string pipeName, ICompositorStateProvider compositor)
     {
         if (!pipeName.StartsWith("everywhere-primary-", StringComparison.Ordinal))
             throw new ArgumentException("Invalid primary-selection relay.", nameof(pipeName));
         var clipboardState = Environment.GetEnvironmentVariable("CLIPBOARD_STATE");
         if (clipboardState == "sensitive") return;
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-        var connection = new HyprlandConnection();
-        var window = connection.Read<HyprlandWindow>("activewindow");
-        if (window.ProcessId <= 0) return;
-        var pointer = connection.Read<Dictionary<string, int>>("cursorpos");
+        var window = await compositor.GetActiveWindowAsync(deadline.Token).ConfigureAwait(false);
+        if (window is null || window.ProcessId <= 0) return;
+        var pointer = await compositor.GetGlobalCursorPositionAsync(deadline.Token).ConfigureAwait(false);
         var (text, isIncomplete) = clipboardState is "nil" or "clear"
             ? (string.Empty, false)
             : await Task.Run(() => ReadTextAsync(Console.In, deadline.Token), deadline.Token)
                 .WaitAsync(deadline.Token).ConfigureAwait(false);
-        var change = new PrimarySelectionChange(text, isIncomplete, window.Address, window.ProcessId,
-            pointer["x"], pointer["y"]);
+        var change = new PrimarySelectionChange(text, isIncomplete, window.Id, window.ProcessId,
+            pointer.X, pointer.Y);
         await using var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.Out, PipeOptions.Asynchronous);
         await pipe.ConnectAsync(deadline.Token).ConfigureAwait(false);
         new LinuxNamedPipePeerVerifier().VerifyServer(pipe);
@@ -78,7 +77,7 @@ public sealed class PrimarySelectionMonitor : IAsyncDisposable
             var listener = ListenAsync(baseline);
             var start = new ProcessStartInfo("wl-paste") { UseShellExecute = false, RedirectStandardError = true };
             var executable = Environment.ProcessPath ?? throw new InvalidOperationException("The selection callback executable is unavailable.");
-            foreach (var argument in new[] { "--primary", "--type", "text", "--watch", executable, "--hyprland-primary-selection", _pipeName })
+            foreach (var argument in new[] { "--primary", "--type", "text", "--watch", executable, "--linux-primary-selection", _pipeName })
                 start.ArgumentList.Add(argument);
             try
             {

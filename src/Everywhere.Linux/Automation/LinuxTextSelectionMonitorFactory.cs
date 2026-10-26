@@ -10,7 +10,7 @@ namespace Everywhere.Linux.Automation;
 /// Combines toolkit selection events and optional Wayland PRIMARY evidence without
 /// global input grabs, regular-clipboard mutation or synthetic Copy operations.
 /// </summary>
-public sealed class LinuxTextSelectionMonitorFactory(HyprlandVisualElementBackend backend) : ITextSelectionMonitorFactory
+public sealed class LinuxTextSelectionMonitorFactory(LinuxVisualElementBackend backend) : ITextSelectionMonitorFactory
 {
     public ITextSelectionMonitor Create(ITextSelectionMonitorContext context, int mainProcessId,
         TextSelectionMonitoringConfiguration configuration, TextSelectionDiagnostics diagnostics,
@@ -22,7 +22,7 @@ public sealed class LinuxTextSelectionMonitorFactory(HyprlandVisualElementBacken
     private sealed class Monitor : ITextSelectionMonitor
     {
         private static readonly string[] EventTypes = ["object:text-selection-changed", "object:text-caret-moved"];
-        private readonly HyprlandVisualElementBackend _backend;
+        private readonly LinuxVisualElementBackend _backend;
         private readonly ITextSelectionMonitorContext _context;
         private readonly int _mainProcessId;
         private readonly Func<TextSelectionObservation, CancellationToken, ValueTask> _publish;
@@ -38,7 +38,7 @@ public sealed class LinuxTextSelectionMonitorFactory(HyprlandVisualElementBacken
         private TextSelectionMonitoringConfiguration _configuration;
         private int _isDisposed;
 
-        public Monitor(HyprlandVisualElementBackend backend, ITextSelectionMonitorContext context, int mainProcessId,
+        public Monitor(LinuxVisualElementBackend backend, ITextSelectionMonitorContext context, int mainProcessId,
             TextSelectionMonitoringConfiguration configuration, Func<TextSelectionObservation, CancellationToken, ValueTask> publish)
         {
             _backend = backend;
@@ -200,15 +200,15 @@ public sealed class LinuxTextSelectionMonitorFactory(HyprlandVisualElementBacken
 
         private SelectionEvidence? ReadSelection(VisualContext context, SelectionSignal signal)
         {
-            var window = _backend.Connection.Read<Hyprland.HyprlandWindow>("activewindow");
-            if (window.ProcessId == _mainProcessId || window.ProcessId <= 0) return null;
+            var window = _backend.Compositor.GetActiveWindowAsync().GetAwaiter().GetResult();
+            if (window is null || window.ProcessId == _mainProcessId || window.ProcessId <= 0) return null;
             var configuration = Volatile.Read(ref _configuration);
-            if (configuration.IsFullscreenApplicationExcluded && window.Fullscreen != 0) return null;
+            if (configuration.IsFullscreenApplicationExcluded && window.IsFullscreen) return null;
             var path = File.ResolveLinkTarget($"/proc/{window.ProcessId}/exe", true)?.FullName;
             if (path is null || configuration.ExcludedApplications.Contains(path, StringComparer.Ordinal)) return null;
             if (signal.Primary is { } primary)
             {
-                if (string.IsNullOrWhiteSpace(primary.Text) || primary.ProcessId != window.ProcessId || primary.WindowAddress != window.Address) return null;
+                if (string.IsNullOrWhiteSpace(primary.Text) || primary.ProcessId != window.ProcessId || primary.WindowAddress != window.Id) return null;
                 // PRIMARY proves selected text, not which accessible object owns
                 // it. Never manufacture a remote visual anchor from later focus.
                 var observation = new TextSelectionObservation(_context, primary.Text, isTextIncomplete: primary.IsIncomplete)
@@ -216,7 +216,7 @@ public sealed class LinuxTextSelectionMonitorFactory(HyprlandVisualElementBacken
                     ApplicationIdentity = path,
                     PointerPosition = new PixelPoint(primary.PointerX, primary.PointerY)
                 };
-                return new SelectionEvidence(observation, window.Address);
+                return new SelectionEvidence(observation, window.Id);
             }
             if (_backend.Accessibility.Call(() => AtspiNative.Pid(signal.Source)) != window.ProcessId) return null;
             var retention = context.CreateRetention();
@@ -226,14 +226,14 @@ public sealed class LinuxTextSelectionMonitorFactory(HyprlandVisualElementBacken
                 var text = element.GetSelectedText(65536);
                 if (string.IsNullOrWhiteSpace(text)) return null;
                 var result = element.Query(new VisualElementQueryRequest(VisualElementFields.Id | VisualElementFields.ProcessId, 0));
-                var pointer = _backend.Connection.Read<Dictionary<string, int>>("cursorpos");
+                var pointer = _backend.Compositor.GetGlobalCursorPositionAsync().GetAwaiter().GetResult();
                 var observation = new TextSelectionObservation(_context, text, new TextSelectionSource(retention, result), text.Length >= 32768)
                 {
                     ApplicationIdentity = path,
-                    PointerPosition = new PixelPoint(pointer["x"], pointer["y"])
+                    PointerPosition = pointer
                 };
                 retention = null;
-                return new SelectionEvidence(observation, window.Address);
+                return new SelectionEvidence(observation, window.Id);
             }
             finally { retention?.Dispose(); }
         }

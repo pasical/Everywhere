@@ -11,6 +11,7 @@ using Everywhere.Automation;
 using Everywhere.Extensions;
 using Everywhere.Interop;
 using Everywhere.Linux.Automation;
+using Everywhere.Linux.Desktop;
 using Everywhere.Linux.Platform;
 using Everywhere.Linux.ProcessIsolation;
 using Everywhere.ProcessIsolation.Automation;
@@ -32,7 +33,7 @@ public static partial class Program
     {
         Serilog.Log.Logger = new Serilog.LoggerConfiguration().MinimumLevel.Debug().WriteTo.Console().CreateLogger();
         if (ProcessRoleCommandLine.ParseHostsControl(args) is not null ||
-            ProcessRoleCommandLine.Parse(args) != ProcessRole.Main || args.FirstOrDefault() is "--hyprland-shortcut" or "--hyprland-primary-selection" ||
+            ProcessRoleCommandLine.Parse(args) != ProcessRole.Main || args.FirstOrDefault() is "--hyprland-shortcut" or "--linux-primary-selection" ||
             args.Any(argument => argument.StartsWith("sylinko-everywhere:", StringComparison.OrdinalIgnoreCase)))
         {
             Everywhere.Linux.Program.Main(args);
@@ -70,13 +71,14 @@ public static partial class Program
         }
         if (args.FirstOrDefault() == "--native") return RunNativeAsync(args).GetAwaiter().GetResult();
         return AppBuilder.Configure<ProbeApplication>().UsePlatformDetect().UseWaylandWithFallback()
-            .AfterPlatformServicesSetup(_ => HyprlandWindowingPlatform.Install())
+            .AfterPlatformServicesSetup(_ => LinuxDesktopServices.Create().InstallWindowingPlatform())
             .StartWithClassicDesktopLifetime(args, ShutdownMode.OnExplicitShutdown);
     }
 
     private static async Task<int> RunNativeAsync(string[] args)
     {
-        using var backend = new HyprlandVisualElementBackend();
+        var desktop = LinuxDesktopServices.Create();
+        using var backend = new LinuxVisualElementBackend(desktop.Compositor, desktop.ScreenCapturer);
         var window = backend.ReadDesktop().Windows.Single(item => item.Title == "Everywhere controlled fixture");
         using var context = new VisualContext();
         using var turn = context.BeginTurn();
@@ -98,6 +100,11 @@ public static partial class Program
         var clicks = ReadClicks(counterPath);
         button.Invoke();
         await WaitForClicksAsync(counterPath, ++clicks);
+        using (var capture = await button.CaptureAsync(CancellationToken.None))
+        {
+            if (capture.Data == 0 || capture.Bounds != bound.Snapshot.Bounds || capture.Size.Width <= 0)
+                throw new InvalidOperationException("The headless automation capture has no usable pixels.");
+        }
         var provider = false;
         if (args.Contains("--provider"))
         {
@@ -132,7 +139,7 @@ public static partial class Program
             await WaitForClicksAsync(counterPath, ++clicks);
             provider = true;
         }
-        Console.WriteLine(JsonSerializer.Serialize(new { NativeGtkTree = true, UnicodeRoundTrip = true, SemanticInvoke = true, DeepSeekFlash = provider, Window = window.Bounds, Button = bound.Snapshot.Bounds, context.TargetCount }));
+        Console.WriteLine(JsonSerializer.Serialize(new { NativeGtkTree = true, UnicodeRoundTrip = true, SemanticInvoke = true, DeepSeekFlash = provider, Window = window.SelectionBounds, Button = bound.Snapshot.Bounds, context.TargetCount }));
         return 0;
     }
 
@@ -197,8 +204,9 @@ public sealed class ProbeApplication : Application
             var hosts = services.GetRequiredService<HostProcessCoordinator>();
             await hosts.InitializeAsync(CancellationToken.None);
             var visuals = services.GetRequiredService<ChatVisualService>();
-            using var helper = new LinuxWindowHelper();
-            var service = new HyprlandScreenSelectionService(helper, new LinuxNativeHelper());
+            var desktop = LinuxDesktopServices.Create();
+            using var helper = new LinuxWindowHelper(desktop.Overlays);
+            var service = new LinuxScreenSelectionService(desktop.Compositor, desktop.Overlays, desktop.ScreenCapturer, new LinuxNativeHelper());
             using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(25));
             if (Program.Arguments.Contains("--passive-overlay"))
             {

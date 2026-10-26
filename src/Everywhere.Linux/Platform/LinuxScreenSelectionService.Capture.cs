@@ -4,7 +4,7 @@ using Avalonia.Media;
 using Everywhere.Automation;
 using Everywhere.Extensions;
 using Everywhere.Interop;
-using Everywhere.Linux.Hyprland;
+using Everywhere.Linux.Desktop;
 using Everywhere.ProcessIsolation.Automation;
 using Everywhere.Views;
 using Bitmap = Avalonia.Media.Imaging.Bitmap;
@@ -13,7 +13,7 @@ namespace Everywhere.Linux.Platform;
 
 using SkiaSharp;
 
-partial class HyprlandScreenSelectionService
+partial class LinuxScreenSelectionService
 {
     /// <summary>Maps a logical region to native pixels without stretching rounded output bounds.</summary>
     public static PixelRect CapturePixelBounds(PixelRect region, PixelRect output, double density, PixelSize pixels)

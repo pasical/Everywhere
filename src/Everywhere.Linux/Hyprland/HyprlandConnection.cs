@@ -55,9 +55,24 @@ public sealed class HyprlandConnection
             throw new InvalidOperationException("Hyprland rejected the scoped operation: " + response);
     }
 
-    private async Task<string> RequestAsync(string request)
+    /// <summary>Reads one bounded JSON observation, honoring caller cancellation.</summary>
+    public async ValueTask<T> ReadAsync<T>(string command, CancellationToken cancellationToken = default)
     {
-        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        try
+        {
+            using var document = JsonDocument.Parse(await RequestAsync("j/" + command, cancellationToken).ConfigureAwait(false));
+            return document.Deserialize<T>() ?? throw new InvalidDataException("Hyprland returned no observation.");
+        }
+        catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new TimeoutException("The Hyprland IPC observation exceeded its deadline.", exception);
+        }
+    }
+
+    private async Task<string> RequestAsync(string request, CancellationToken cancellationToken = default)
+    {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(TimeSpan.FromSeconds(2));
         using var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
         await socket.ConnectAsync(new UnixDomainSocketEndPoint(_socketPath), deadline.Token).ConfigureAwait(false);
         var bytes = Encoding.UTF8.GetBytes(request);

@@ -4,25 +4,25 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Everywhere.Automation;
 using Everywhere.Interop;
-using Everywhere.Linux.Hyprland;
+using Everywhere.Linux.Desktop;
 using Everywhere.ProcessIsolation.Automation;
 using Everywhere.Views;
 using Bitmap = Avalonia.Media.Imaging.Bitmap;
 
 namespace Everywhere.Linux.Platform;
 
-partial class HyprlandScreenSelectionService
+partial class LinuxScreenSelectionService
 {
     private sealed class PickerOverlay : Window
     {
-        private readonly HyprlandCoordinateMap _map;
+        private readonly OutputCoordinateMap _map;
         private readonly double _desktopScale;
         private readonly Canvas _canvas;
         private readonly Border[] _masks;
         private readonly Border _outline = new() { BorderBrush = Brushes.White, BorderThickness = new Thickness(2), IsHitTestVisible = false };
         private readonly ScreenSelectionToolTip _tip;
 
-        public PickerOverlay(INativeHelper nativeHelper, HyprlandCoordinateMap map, double desktopScale,
+        public PickerOverlay(INativeHelper nativeHelper, OutputCoordinateMap map, double desktopScale,
             ScreenSelectionMode[] modes, ScreenSelectionMode mode, bool isApplicationPicker, Bitmap? background)
         {
             _map = map;

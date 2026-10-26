@@ -3,20 +3,20 @@ using System.Diagnostics;
 using Avalonia;
 using Avalonia.Input;
 using Everywhere.Automation;
-using Everywhere.Linux.Hyprland;
+using Everywhere.Linux.Desktop;
 
 namespace Everywhere.Linux.Automation;
 
 /// <summary>A retained AT-SPI proxy. Its native reference prevents pointer reuse while this identity is alive.</summary>
 public sealed class AtspiVisualElement : VisualElement
 {
-    private readonly HyprlandVisualElementBackend _backend;
-    private readonly HyprlandWindow _window;
+    private readonly LinuxVisualElementBackend _backend;
+    private readonly CompositorWindowInfo _window;
     private readonly nint _pointer;
     private bool _canReadGeometry = true;
 
-    private AtspiVisualElement(VisualElementIdentity identity, HyprlandVisualElementBackend backend,
-        HyprlandWindow window, nint pointer) : base(identity, backend.AllocateId())
+    private AtspiVisualElement(VisualElementIdentity identity, LinuxVisualElementBackend backend,
+        CompositorWindowInfo window, nint pointer) : base(identity, backend.AllocateId())
     {
         _backend = backend;
         _window = window;
@@ -24,10 +24,10 @@ public sealed class AtspiVisualElement : VisualElement
         _pointer = backend.Accessibility.Call(() => AtspiNative.g_object_ref(pointer));
     }
 
-    public static AtspiVisualElement GetOrCreate(VisualElementRetention retention, HyprlandVisualElementBackend backend,
-        HyprlandWindow window, nint pointer)
+    public static AtspiVisualElement GetOrCreate(VisualElementRetention retention, LinuxVisualElementBackend backend,
+        CompositorWindowInfo window, nint pointer)
     {
-        return retention.Context.GetIdentityMap<NativeIdentity>().GetOrAdd(retention, new NativeIdentity(backend, window.Address, pointer),
+        return retention.Context.GetIdentityMap<NativeIdentity>().GetOrAdd(retention, new NativeIdentity(backend, window.Id, pointer),
             (Backend: backend, Window: window, Pointer: pointer),
             static (identity, state) => new AtspiVisualElement(identity, state.Backend, state.Window, state.Pointer));
     }
@@ -258,7 +258,7 @@ public sealed class AtspiVisualElement : VisualElement
 
     protected override Task<IVisualElementCapture> CaptureCoreAsync(CancellationToken cancellationToken)
     {
-        return LinuxScreenCapture.CaptureAsync(_backend.Accessibility.Call(ReadBounds) ?? throw new NotSupportedException("The control has no usable bounds."), cancellationToken);
+        return _backend.CaptureAsync(_backend.Accessibility.Call(ReadBounds) ?? throw new NotSupportedException("The control has no usable bounds."), cancellationToken);
     }
 
     protected override VisualElement AdoptCore(VisualElementRetention destinationRetention)
@@ -281,12 +281,12 @@ public sealed class AtspiVisualElement : VisualElement
     private PixelRect? ReadBounds()
     {
         if (!_canReadGeometry) throw new NotSupportedException("The embedded provider has no safe window-relative geometry; capture its compositor window instead.");
-        var window = _backend.ReadDesktop().Windows.FirstOrDefault(item => item.Address == _window.Address && item.ProcessId == _window.ProcessId);
+        var window = _backend.ReadDesktop().Windows.FirstOrDefault(item => item.Id == _window.Id && item.ProcessId == _window.ProcessId);
         if (window is null)
             throw new VisualElementProviderException(VisualElementQueryFailureKind.ElementUnavailable, "The source window disappeared.");
         var rectangle = AtspiNative.ReadExtents(_pointer, AtspiCoordinates.Window);
         return rectangle is { } bounds
-            ? new PixelRect(checked(window.Bounds.X + bounds.X), checked(window.Bounds.Y + bounds.Y), bounds.Width, bounds.Height)
+            ? new PixelRect(checked(window.ClientRect.X + bounds.X), checked(window.ClientRect.Y + bounds.Y), bounds.Width, bounds.Height)
             : null;
     }
 
@@ -354,5 +354,5 @@ public sealed class AtspiVisualElement : VisualElement
         };
     }
 
-    private sealed record NativeIdentity(HyprlandVisualElementBackend Backend, string WindowAddress, nint Pointer);
+    private sealed record NativeIdentity(LinuxVisualElementBackend Backend, string WindowAddress, nint Pointer);
 }

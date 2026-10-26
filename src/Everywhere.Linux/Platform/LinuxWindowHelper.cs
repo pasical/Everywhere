@@ -4,22 +4,14 @@ using Avalonia.Controls;
 using Avalonia.Platform;
 using Everywhere.Interop;
 using Everywhere.Views;
+using Everywhere.Linux.Desktop;
 
 namespace Everywhere.Linux.Platform;
 
 /// <summary>Configures owned UI surfaces through the compositor bridge and backend input regions.</summary>
-public sealed partial class LinuxWindowHelper : IWindowHelper, IDisposable
+public sealed partial class LinuxWindowHelper(IOverlayWindowController overlays) : IWindowHelper, IDisposable
 {
     private nint _display;
-
-    /// <summary>Flushes owned surface hides before an interactive capture or element preview.</summary>
-    public Task WaitForHiddenSurfacesAsync(CancellationToken cancellationToken)
-    {
-        return AvaloniaLocator.Current.GetRequiredService<IWindowingPlatform>() is HyprlandWindowingPlatform platform
-            ? platform.WaitForHiddenSurfacesAsync(cancellationToken)
-            : Task.CompletedTask;
-    }
-
 
     public void SetWindowProperties(Window window, WindowInputMode? inputMode = null, bool? hitTestVisible = null, WindowLayer? layer = null)
     {
@@ -27,47 +19,20 @@ public sealed partial class LinuxWindowHelper : IWindowHelper, IDisposable
         // Apply the same owned-window role before their first Wayland map.
         InitializeWindow(window);
         if (inputMode is { } mode)
-            window.ShowActivated = mode == WindowInputMode.Normal;
+            overlays.SetKeyboardInteractivity(window, mode == WindowInputMode.Normal);
         if (hitTestVisible is { } isHitTestVisible)
-            window.IsHitTestVisible = isHitTestVisible;
+            overlays.SetInputRegion(window, isHitTestVisible ? null : default(PixelRect));
         if (layer is { } band)
-            window.Topmost = band != WindowLayer.Normal;
-        if (window.PlatformImpl?.TryGetFeature<HyprlandWindowState>() is { } state)
-        {
-            if (inputMode is { } policy)
-                state.CanActivate = policy == WindowInputMode.Normal;
-            if (hitTestVisible is { } canHitTest)
-                state.IsHitTestVisible = canHitTest;
-            if (layer is >= WindowLayer.Overlay && !state.CanActivate && !state.IsHitTestVisible &&
-                double.IsFinite(window.Width) && double.IsFinite(window.Height))
-                state.SetOverlayBounds(new PixelRect(window.Position, new PixelSize((int)Math.Round(window.Width * window.DesktopScaling),
-                    (int)Math.Round(window.Height * window.DesktopScaling))), false);
-            state.RefreshInputPolicy();
-        }
-    }
-
-    /// <summary>Places one process-owned overlay without changing saved compositor configuration.</summary>
-    public void PrepareOverlay(Window window, PixelRect bounds, bool isInteractive)
-    {
-        var state = window.PlatformImpl?.TryGetFeature<HyprlandWindowState>() ?? throw new InvalidOperationException("The Hyprland windowing bridge is not initialized.");
-        state.SetOverlayBounds(bounds, isInteractive);
+            overlays.SetTopmost(window, band != WindowLayer.Normal);
+        if (layer is >= WindowLayer.Overlay && !window.ShowActivated && !window.IsHitTestVisible &&
+            double.IsFinite(window.Width) && double.IsFinite(window.Height))
+            overlays.SetOverlayBounds(window, new PixelRect(window.Position, new PixelSize((int)Math.Round(window.Width * window.DesktopScaling),
+                (int)Math.Round(window.Height * window.DesktopScaling))));
     }
 
     public bool TryPrepareInput(Window window) => false;
     public IWindowInputCapture? TryCaptureInput(Window window) => null;
-    public void RaiseWindow(Window window)
-    {
-        if (window.PlatformImpl?.TryGetFeature<HyprlandWindowState>() is { } state)
-        {
-            state.Raise();
-            return;
-        }
-        if (TryGetX11Window(window, out var handle))
-        {
-            XRaiseWindow(_display, handle);
-            XFlush(_display);
-        }
-    }
+    public void RaiseWindow(Window window) => overlays.Raise(window);
     public bool GetEffectiveVisible(Window window) => window.IsVisible && window.WindowState != WindowState.Minimized;
     public bool? IsRegionCovered(Window window, PixelRect bounds) => null;
     public void SetCloaked(Window window, bool cloaked)
@@ -95,26 +60,18 @@ public sealed partial class LinuxWindowHelper : IWindowHelper, IDisposable
     }
     public bool BringToForeground(Window window)
     {
-        if (window.PlatformImpl?.TryGetFeature<HyprlandWindowState>() is { } state)
-            state.Activate();
-        else
-            window.Activate();
+        overlays.Activate(window);
         return window.IsActive;
     }
     public double SetCornerRadius(Window window, double radius) => 0;
     public void InitializeWindow(Window window)
     {
-        if (window.PlatformImpl?.TryGetFeature<HyprlandWindowState>() is not { } state)
-            return;
-        state.IsAnchoredPopup = window is TextSelectionToolbarWindow;
-        if (window is ChatWindow or TextSelectionToolbarWindow)
-            state.IsFloating = true;
+        if (window is TextSelectionToolbarWindow)
+            overlays.AttachOverlayWindow(window, OverlayRole.SelectionToolbar);
+        else if (window is ChatWindow)
+            overlays.AttachOverlayWindow(window, OverlayRole.FloatingWindow);
         else if (window is VisualElementOverlayWindow)
-        {
-            state.IsFloating = true;
-            state.CanActivate = false;
-            state.IsHitTestVisible = false;
-        }
+            overlays.AttachOverlayWindow(window, OverlayRole.PassiveHighlight);
     }
     public void Dispose()
     {
@@ -140,8 +97,6 @@ public sealed partial class LinuxWindowHelper : IWindowHelper, IDisposable
     private static partial nint XOpenDisplay(nint name);
     [LibraryImport("libX11.so.6")]
     private static partial int XCloseDisplay(nint display);
-    [LibraryImport("libX11.so.6")]
-    private static partial int XRaiseWindow(nint display, nint window);
     [LibraryImport("libX11.so.6")]
     private static partial int XFlush(nint display);
     [LibraryImport("libX11.so.6")]

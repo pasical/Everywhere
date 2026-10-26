@@ -1,27 +1,26 @@
-﻿using System.Diagnostics;
-using System.Runtime.InteropServices;
-using Avalonia;
+﻿using Avalonia;
 using Everywhere.Automation;
 using Everywhere.Interop;
-using Everywhere.Linux.Hyprland;
+using Everywhere.Linux.Desktop;
 using Everywhere.ProcessIsolation.Automation;
 
 namespace Everywhere.Linux.Automation;
 
 /// <summary>Composes compositor topology with scoped application accessibility without querying through Main's overlays.</summary>
-public sealed partial class HyprlandVisualElementBackend : IVisualElementBackend, IVisualPickerResolver
+public sealed partial class LinuxVisualElementBackend(ICompositorStateProvider compositor, ISilentScreenCapturer screenCapturer) : IVisualElementBackend, IVisualPickerResolver
 {
-    public HyprlandConnection Connection { get; } = new();
+    public ICompositorStateProvider Compositor { get; } = compositor;
+    public ISilentScreenCapturer ScreenCapturer { get; } = screenCapturer;
     public AtspiClient Accessibility { get; } = new();
     private const int MaximumApplicationWindows = 128;
     private const int BoundsRetryDelayMilliseconds = 1000;
     private long _nextId;
-    private readonly Dictionary<(int ProcessId, string Address), long> _boundsRetryTimes = [];
+    private readonly Dictionary<(int ProcessId, string WindowId), long> _boundsRetryTimes = [];
 
     /// <summary>Reports the short circuit for a window whose native bounds provider timed out.</summary>
-    public bool IsBoundsQueryBackedOff(HyprlandWindow window)
+    public bool IsBoundsQueryBackedOff(CompositorWindowInfo window)
     {
-        var key = (window.ProcessId, window.Address);
+        var key = (window.ProcessId, window.Id);
         if (!_boundsRetryTimes.TryGetValue(key, out var retryAt))
             return false;
         if (Environment.TickCount64 < retryAt)
@@ -31,7 +30,7 @@ public sealed partial class HyprlandVisualElementBackend : IVisualElementBackend
     }
 
     /// <summary>Prevents one embedded provider from stalling every node in a tree read.</summary>
-    public void RecordBoundsTimeout(HyprlandWindow window)
+    public void RecordBoundsTimeout(CompositorWindowInfo window)
     {
         var now = Environment.TickCount64;
         foreach (var pair in _boundsRetryTimes.ToArray())
@@ -39,13 +38,16 @@ public sealed partial class HyprlandVisualElementBackend : IVisualElementBackend
             if (pair.Value <= now)
                 _boundsRetryTimes.Remove(pair.Key);
         }
-        _boundsRetryTimes[(window.ProcessId, window.Address)] = now + BoundsRetryDelayMilliseconds;
+        _boundsRetryTimes[(window.ProcessId, window.Id)] = now + BoundsRetryDelayMilliseconds;
     }
 
 
-    public HyprlandDesktop ReadDesktop()
+    public DesktopSnapshot ReadDesktop()
     {
-        return new(HyprlandDesktop.VisibleOutputs(Connection.Read<HyprlandMonitor[]>("monitors")), Connection.Read<HyprlandWindow[]>("clients"));
+        // Shared Automation contracts are synchronous. Providers perform bounded IPC
+        // without capturing a synchronization context; no Avalonia work runs here.
+        return new(Compositor.GetOutputsAsync().GetAwaiter().GetResult(),
+            Compositor.GetWindowsInStackingOrderAsync().GetAwaiter().GetResult());
     }
 
     public string AllocateId() => "linux:" + Interlocked.Increment(ref _nextId);
@@ -67,9 +69,9 @@ public sealed partial class HyprlandVisualElementBackend : IVisualElementBackend
         }, request, excludedProcessId);
     }
 
-    public HyprlandVisualElement GetWindow(VisualElementRetention retention, HyprlandWindow window)
+    public CompositorVisualElement GetWindow(VisualElementRetention retention, CompositorWindowInfo window)
     {
-        return HyprlandVisualElement.GetOrCreate(retention, this, window);
+        return CompositorVisualElement.GetOrCreate(retention, this, window);
     }
 
     public void Dispose() => Accessibility.Dispose();
@@ -81,16 +83,16 @@ public sealed partial class HyprlandVisualElementBackend : IVisualElementBackend
         var point = locator.Kind is VisualElementLocatorKind.Point ? locator.Point : ReadPointer();
         if (resolution == VisualElementResolution.Screen || locator.Kind == VisualElementLocatorKind.Default && resolution == VisualElementResolution.Direct)
         {
-            var monitor = desktop.Monitors.FirstOrDefault(item => item.Bounds.Contains(point)) ?? desktop.Monitors.FirstOrDefault();
-            return monitor is null ? null : HyprlandVisualElement.GetOrCreate(retention, this, monitor).Query(request);
+            var monitor = desktop.Outputs.FirstOrDefault(item => item.Bounds.Contains(point)) ?? desktop.Outputs.FirstOrDefault();
+            return monitor is null ? null : CompositorVisualElement.GetOrCreate(retention, this, monitor).Query(request);
         }
-        HyprlandWindow? window;
+        CompositorWindowInfo? window;
         if (locator.Kind == VisualElementLocatorKind.NativeWindow)
             window = desktop.Windows.FirstOrDefault(item => item.Handle == locator.NativeWindowHandle && item.ProcessId != excludedProcessId);
         else if (locator.Kind is VisualElementLocatorKind.Focused or VisualElementLocatorKind.Default)
         {
-            var active = Connection.Read<HyprlandWindow>("activewindow");
-            window = desktop.Windows.FirstOrDefault(item => item.Address == active.Address && item.ProcessId != excludedProcessId);
+            var active = Compositor.GetActiveWindowAsync().GetAwaiter().GetResult();
+            window = desktop.Windows.FirstOrDefault(item => item.Id == active?.Id && item.ProcessId != excludedProcessId);
         }
         else
             window = desktop.WindowAt(point, excludedProcessId);
@@ -118,9 +120,14 @@ public sealed partial class HyprlandVisualElementBackend : IVisualElementBackend
         }
     }
 
+    /// <summary>Composes output captures in logical desktop coordinates.</summary>
+    public Task<IVisualElementCapture> CaptureAsync(PixelRect bounds, CancellationToken cancellationToken)
+    {
+        return LinuxScreenCapture.CaptureAsync(Compositor, ScreenCapturer, bounds, cancellationToken);
+    }
+
     private PixelPoint ReadPointer()
     {
-        var pointer = Connection.Read<Dictionary<string, int>>("cursorpos");
-        return new PixelPoint(pointer["x"], pointer["y"]);
+        return Compositor.GetGlobalCursorPositionAsync().GetAwaiter().GetResult();
     }
 }
