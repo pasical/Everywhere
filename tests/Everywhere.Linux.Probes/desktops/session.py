@@ -35,6 +35,19 @@ def wait_for_path(path, process):
     raise TimeoutError(str(path))
 
 
+# GNOME's session startup uses Gio.DBus.system even for a devkit display.
+# Provide a private auxiliary bus, never the host's system bus or its services.
+system_address = 'unix:path=' + str(WORK / 'runtime/system-bus')
+(WORK / 'runtime/system-bus').unlink(missing_ok=True)
+system_bus = spawn(['dbus-daemon', '--session', '--nofork', '--address=' + system_address], 'system-bus')
+wait_for_path(WORK / 'runtime/system-bus', system_bus)
+os.environ['DBUS_SYSTEM_BUS_ADDRESS'] = system_address
+subprocess.run(['dbus-update-activation-environment', 'DBUS_SYSTEM_BUS_ADDRESS'], check=True)
+# Mutter Devkit transports its nested output over a private PipeWire connection.
+media = spawn(['pipewire'], 'pipewire')
+wait_for_path(Path(os.environ['XDG_RUNTIME_DIR']) / 'pipewire-0', media)
+spawn(['wireplumber'], 'wireplumber')
+
 os.environ.update(DISPLAY=':90', LIBGL_ALWAYS_SOFTWARE='1', QT_QUICK_BACKEND='software')
 xserver = spawn(['Xvfb', ':90', '-screen', '0', '1280x800x24', '-ac', '-nolisten', 'tcp'], 'xserver')
 wait_for_path(Path('/tmp/.X11-unix/X90'), xserver)
@@ -58,17 +71,36 @@ elif MODE == 'plasma-wayland':
     os.environ.update(WAYLAND_DISPLAY='wayland-test', QT_QPA_PLATFORM='wayland', GDK_BACKEND='wayland')
     subprocess.run(['dbus-update-activation-environment', 'DISPLAY', 'WAYLAND_DISPLAY', 'XDG_SESSION_TYPE', 'XDG_CURRENT_DESKTOP'], check=True)
     spawn(['plasmashell'], 'shell', {'QT_IM_MODULE': ''})
+elif MODE == 'gnome-wayland':
+    os.environ.update(XDG_SESSION_TYPE='wayland', XDG_CURRENT_DESKTOP='GNOME', XDG_SESSION_DESKTOP='gnome',
+                      MUTTER_DEBUG_DUMMY_MODE_SPECS='1280x800')
+    subprocess.run(['gsettings', 'set', 'org.gnome.desktop.interface', 'enable-animations', 'false'], check=True)
+    subprocess.run(['gsettings', 'set', 'org.gnome.desktop.input-sources', 'sources', "[('ibus', 'libpinyin')]"], check=True)
+    subprocess.run(['dbus-update-activation-environment', 'DISPLAY', 'XDG_SESSION_TYPE', 'XDG_CURRENT_DESKTOP'], check=True)
+    spawn(['ibus-daemon', '--replace', '--xim', '--panel=disable', '--desktop=gnome'], 'ime')
+    desktop = spawn(['gnome-shell', '--wayland', '--no-x11', '--wayland-display', 'wayland-test', '--virtual-monitor', '1280x800', '--devkit'],
+                    'compositor', {'GDK_BACKEND': 'x11', 'GSK_RENDERER': 'cairo'})
+    wait_for_path(Path(os.environ['XDG_RUNTIME_DIR']) / 'wayland-test', desktop)
+    os.environ.update(WAYLAND_DISPLAY='wayland-test', QT_QPA_PLATFORM='wayland', GDK_BACKEND='wayland')
+    subprocess.run(['dbus-update-activation-environment', 'DISPLAY', 'WAYLAND_DISPLAY', 'XDG_SESSION_TYPE', 'XDG_CURRENT_DESKTOP'], check=True)
 else:
     raise ValueError('Unconfigured desktop: ' + MODE)
 
+time.sleep(1)
 if desktop.poll() is not None:
     raise RuntimeError('The compositor did not remain running')
 
-# Feed the read-only live viewer, and retain an actual dynamic recording.
-spawn(['ffmpeg', '-nostdin', '-hide_banner', '-loglevel', 'error', '-f', 'x11grab', '-framerate', '3',
-       '-i', ':90', '-update', '1', '-atomic_writing', '1', '-y', '/mnt/frame.jpg'], 'live-view')
-spawn(['ffmpeg', '-nostdin', '-hide_banner', '-loglevel', 'error', '-f', 'x11grab', '-framerate', '12',
-       '-i', ':90', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-y', '/mnt/recording.mkv'], 'recording')
+# GNOME is captured from its actual native output. The other test compositors
+# render into their private Xvfb parent. Neither path reads the host's display.
+if MODE == 'gnome-wayland':
+    subprocess.run(['gdbus', 'wait', '--session', '--timeout=15', 'org.gnome.Mutter.ScreenCast'], check=True)
+    spawn(['python3', '/mnt/gnome_stream.py'], 'native-stream')
+else:
+    # Feed the read-only live viewer, and retain an actual dynamic recording.
+    spawn(['ffmpeg', '-nostdin', '-hide_banner', '-loglevel', 'error', '-f', 'x11grab', '-framerate', '3',
+           '-i', ':90', '-update', '1', '-atomic_writing', '1', '-y', '/mnt/frame.jpg'], 'live-view')
+    spawn(['ffmpeg', '-nostdin', '-hide_banner', '-loglevel', 'error', '-f', 'x11grab', '-framerate', '12',
+           '-i', ':90', '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', '-y', '/mnt/recording.mkv'], 'recording')
 
 control = WORK / 'control.sock'
 control.unlink(missing_ok=True)
@@ -76,7 +108,11 @@ server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 server.bind(str(control))
 os.chmod(control, 0o600)
 server.listen(1)
-(WORK / 'ready.json').write_text(json.dumps({'mode': MODE, 'environment': dict(os.environ)}))
+public_environment = {name: os.environ[name] for name in
+                      ['DISPLAY', 'WAYLAND_DISPLAY', 'XDG_RUNTIME_DIR', 'XDG_SESSION_TYPE',
+                       'XDG_CURRENT_DESKTOP', 'DBUS_SESSION_BUS_ADDRESS', 'DBUS_SYSTEM_BUS_ADDRESS']
+                      if name in os.environ}
+(WORK / 'ready.json').write_text(json.dumps({'mode': MODE, 'environment': public_environment}))
 try:
     while True:
         connection, _ = server.accept()
@@ -100,13 +136,12 @@ try:
 finally:
     server.close()
     control.unlink(missing_ok=True)
-    # SIGINT lets ffmpeg finish its recording before other session children exit.
+    # Finish capture before stopping its compositor and media daemons.
     for process in reversed(children):
         if process.poll() is None:
             process.send_signal(signal.SIGINT if Path(process.args[0]).name == 'ffmpeg' else signal.SIGTERM)
-    for process in children:
         try:
-            process.wait(timeout=3)
+            process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait()

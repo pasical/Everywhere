@@ -4,9 +4,10 @@
 
 The repository still builds separate platform packages from one source tree.
 This layer is compiled only by `Everywhere.Linux`; the shared Automation, Core,
-Windows and macOS contracts and interaction policies are unchanged. Hyprland is
-the only implemented desktop backend. The interfaces provide seams for other
-Wayland desktops; they do not establish GNOME, KDE or niri support.
+Windows and macOS contracts and interaction policies are unchanged. Hyprland retains the full current integration. A minimal EWMH X11 backend and
+ordinary Plasma/GNOME Wayland windows are now available as contributor starting
+points. The latter intentionally provide no global state, selection overlays,
+silent capture or global shortcuts. niri remains unimplemented.
 
 `Desktop/LinuxDesktopServices.cs` is the per-process composition root. It selects
 an explicitly inherited Hyprland session, constructs the three services and
@@ -126,3 +127,11 @@ version was not replaced.
 These results do not extend to other desktops, arbitrary input rectangles,
 authoritative Z-order, separate frame geometry or Chromium's previously observed
 mixed-coordinate hover/capture issue. Login was not repeated.
+
+
+## Additional starter backends
+
+See [X11](LinuxX11Starter.md) for restored EWMH/native-pixel designs and
+[ordinary Wayland desktops](LinuxWaylandStarter.md) for the limited Plasma/GNOME
+window and input scope. The shared selection lifecycle does not manufacture
+capabilities for backends that have not implemented their three services.

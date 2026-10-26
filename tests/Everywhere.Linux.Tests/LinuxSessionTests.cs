@@ -1,5 +1,4 @@
 ﻿using Everywhere.Linux.Desktop;
-using Everywhere.Linux.Wayland;
 using Everywhere.ProcessIsolation.Hosts.Input;
 
 namespace Everywhere.Linux.Tests;
@@ -26,10 +25,13 @@ public sealed class LinuxSessionTests
         }
     }
 
-    [TestCase("KDE")]
-    [TestCase("Plasma")]
-    [TestCase("test:KDE")]
-    public void ExplicitPlasmaWayland_WithInheritedHyprlandMarker_LeavesGlobalCapabilitiesUnavailable(string currentDesktop)
+    [TestCase("KDE", LinuxDesktopKind.PlasmaWayland)]
+    [TestCase("Plasma", LinuxDesktopKind.PlasmaWayland)]
+    [TestCase("test:KDE", LinuxDesktopKind.PlasmaWayland)]
+    [TestCase("GNOME", LinuxDesktopKind.GnomeWayland)]
+    [TestCase("ubuntu:GNOME", LinuxDesktopKind.GnomeWayland)]
+    [TestCase("GNOME-Classic:GNOME", LinuxDesktopKind.GnomeWayland)]
+    public void ExplicitWaylandDesktop_WithInheritedHyprlandMarker_LeavesGlobalCapabilitiesUnavailable(string currentDesktop, LinuxDesktopKind expectedKind)
     {
         var names = new[] { "XDG_SESSION_TYPE", "XDG_CURRENT_DESKTOP", "DISPLAY", "WAYLAND_DISPLAY", "HYPRLAND_INSTANCE_SIGNATURE" };
         var previous = names.ToDictionary(name => name, Environment.GetEnvironmentVariable);
@@ -41,7 +43,7 @@ public sealed class LinuxSessionTests
             Environment.SetEnvironmentVariable("WAYLAND_DISPLAY", "test-wayland");
             Environment.SetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE", "inherited-parent");
             var desktop = LinuxDesktopServices.Create();
-            Assert.That(desktop.Kind, Is.EqualTo(LinuxDesktopKind.PlasmaWayland));
+            Assert.That(desktop.Kind, Is.EqualTo(expectedKind));
             Assert.That(desktop.CreateOverlayInputWatcher().IsSupported, Is.False);
             Assert.That(desktop.Compositor.StackingOrderKind, Is.EqualTo(WindowStackingOrderKind.Unavailable));
             Assert.ThrowsAsync<NotSupportedException>(async () => await desktop.Compositor.GetOutputsAsync());

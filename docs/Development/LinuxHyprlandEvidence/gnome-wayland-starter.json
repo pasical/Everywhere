@@ -1,0 +1,23 @@
+{
+  "desktop": "GNOME Shell / Mutter 50.5, virtual 1280x800 output",
+  "backend": "Avalonia.Wayland.WaylandTopLevelFactory",
+  "linuxTestsPassed": 75,
+  "mainAndChatRendered": true,
+  "authenticatedHosts": 2,
+  "hostRecoveryStopped": false,
+  "ime": {
+    "engine": "IBus libpinyin via GNOME native text-input-v3",
+    "preeditAndCandidateWindowObserved": true,
+    "committedChineseInActualChatWindow": true,
+    "events": [
+      {
+        "WindowType": "Everywhere.Views.ChatWindow",
+        "Title": "Chat",
+        "Text": "你好",
+        "NativeHandleKind": null
+      }
+    ]
+  },
+  "testInfrastructure": "Private auxiliary D-Bus, PipeWire/WirePlumber, native Mutter monitor stream and virtual input; no host display, user profile or system bus shared.",
+  "scope": "Ordinary windows and IME only; product global state, capture, overlays, shortcuts and selection assistance remain unported."
+}

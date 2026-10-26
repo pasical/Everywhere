@@ -31,14 +31,15 @@ os.chmod(state / 'runtime', 0o700)
 (state / 'ready.json').unlink(missing_ok=True)
 (state / 'passwd').write_text(f'root:x:0:0:root:/root:/bin/bash\ntester:x:{os.getuid()}:{os.getgid()}:Desktop test:/mnt/home:/bin/bash\n')
 (state / 'group').write_text(f'root:x:0:\ntester:x:{os.getgid()}:\n')
-shutil.copy(Path(__file__).with_name('session.py'), state / 'session.py')
+for helper in ['session.py', 'gnome_stream.py', 'gnome_input.py']:
+    shutil.copy(Path(__file__).with_name(helper), state / helper)
 profile = state / 'config/fcitx5/profile'
 profile.parent.mkdir(exist_ok=True)
 if not profile.exists():
     profile.write_text('[Groups/0]\nName=Default\nDefault Layout=us\nDefaultIM=pinyin\n\n'
                        '[Groups/0/Items/0]\nName=keyboard-us\nLayout=\n\n'
                        '[Groups/0/Items/1]\nName=pinyin\nLayout=\n\n[GroupOrder]\n0=Default\n')
-arguments = ['bwrap', '--ro-bind', str(root), '/', '--dev', '/dev', '--proc', '/proc',
+arguments = ['bwrap', '--clearenv', '--ro-bind', str(root), '/', '--dev', '/dev', '--proc', '/proc',
              '--tmpfs', '/tmp', '--tmpfs', '/run', '--unshare-user', '--unshare-pid',
              '--unshare-ipc', '--unshare-uts', '--hostname', 'everywhere-desktop-lab']
 for source, target in [(state, '/mnt'), (state / 'machine-id', '/etc/machine-id'),
@@ -50,7 +51,10 @@ for source, target in [(state, '/mnt'), (state / 'machine-id', '/etc/machine-id'
 for name in ['DBUS_SESSION_BUS_ADDRESS', 'DBUS_SYSTEM_BUS_ADDRESS', 'DISPLAY', 'WAYLAND_DISPLAY',
              'HYPRLAND_INSTANCE_SIGNATURE', 'GTK_IM_MODULE', 'QT_IM_MODULE', 'XMODIFIERS']:
     arguments += ['--unsetenv', name]
-for name, value in {'HOME': '/mnt/home', 'USER': 'tester', 'LOGNAME': 'tester', 'SHELL': '/bin/bash',
+for name in ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'NO_PROXY', 'http_proxy', 'https_proxy', 'all_proxy', 'no_proxy']:
+    if name in os.environ:
+        arguments += ['--setenv', name, os.environ[name]]
+for name, value in {'PATH': '/usr/bin:/bin', 'HOME': '/mnt/home', 'USER': 'tester', 'LOGNAME': 'tester', 'SHELL': '/bin/bash',
                     'XDG_RUNTIME_DIR': '/mnt/runtime', 'XDG_CONFIG_HOME': '/mnt/config',
                     'XDG_DATA_HOME': '/mnt/data', 'XDG_CACHE_HOME': '/mnt/cache',
                     'XDG_STATE_HOME': '/mnt/state', 'LANG': 'C.UTF-8'}.items():

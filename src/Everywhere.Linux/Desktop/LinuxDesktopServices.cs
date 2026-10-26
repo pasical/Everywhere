@@ -53,11 +53,9 @@ public sealed class LinuxDesktopServices
     public static LinuxDesktopServices Create()
     {
         var kind = DetectSession();
-        if (kind == LinuxDesktopKind.PlasmaWayland) return CreateStandardWayland(kind);
+        if (kind is LinuxDesktopKind.PlasmaWayland or LinuxDesktopKind.GnomeWayland) return CreateStandardWayland(kind);
         if (kind == LinuxDesktopKind.X11)
             return new(LinuxDesktopKind.X11, new X11CompositorStateProvider(), new X11WindowController(), new X11SilentScreenCapturer());
-        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE")))
-            throw new NotSupportedException("This Linux build currently requires a Hyprland session. Other Wayland backends are not implemented.");
         var compositor = new HyprlandCompositorStateProvider(new HyprlandConnection());
         return new(LinuxDesktopKind.Hyprland, compositor, new HyprlandOverlayWindowController(), new HyprlandSilentScreenCapturer(compositor));
     }
@@ -117,6 +115,7 @@ public sealed class LinuxDesktopServices
         {
             if (desktopNames.Contains("KDE", StringComparer.OrdinalIgnoreCase) || desktopNames.Contains("Plasma", StringComparer.OrdinalIgnoreCase))
                 return LinuxDesktopKind.PlasmaWayland;
+            if (desktopNames.Contains("GNOME", StringComparer.OrdinalIgnoreCase)) return LinuxDesktopKind.GnomeWayland;
             if (desktopNames.Length > 0 && !desktopNames.Contains("Hyprland", StringComparer.OrdinalIgnoreCase))
                 throw new NotSupportedException("The selected Wayland desktop integration is not implemented.");
         }
