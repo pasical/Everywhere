@@ -13,7 +13,10 @@ namespace Everywhere.ProcessIsolation.Rpc;
 /// </summary>
 public sealed class RpcConnection : IAsyncDisposable
 {
-    /// <summary>Handles a one-way peer notification.</summary>
+    /// <summary>
+    /// Handles a one-way peer notification. Notifications on one connection run
+    /// in receive order, independently of the transport reader and request handlers.
+    /// </summary>
     public delegate ValueTask RpcNotificationHandler(ReadOnlyMemory<byte> payload, CancellationToken cancellationToken);
 
     /// <summary>Handles a request payload and returns its serialized response.</summary>
@@ -63,6 +66,8 @@ public sealed class RpcConnection : IAsyncDisposable
     private IRpcExceptionMapper? _exceptionMapper;
     private string? _connectionNonce;
     private Task? _disposeTask;
+    // The transport reader owns this chain; requests/responses remain independent.
+    private Task _notificationDispatch = Task.CompletedTask;
     private int _isDisposed;
     private CancellationTokenRegistration _externalCancellationRegistration;
     private int _isFailureSignaled;
@@ -509,7 +514,16 @@ public sealed class RpcConnection : IAsyncDisposable
             throw new RpcProtocolException("The RPC notification operation is not registered.");
         }
 
-        _router.Dispatch(() => handler(frame.Payload, cancellationToken), FailDispatch);
+        // Input events share a sequence across notification operations. Dispatching
+        // them concurrently can accept a later event before an earlier stale event,
+        // causing duplicate shortcuts or losing a capture update. Keep wire order
+        // without blocking the reader needed by reverse requests and responses.
+        var previous = _notificationDispatch;
+        _notificationDispatch = _router.Dispatch(async () =>
+        {
+            await previous.ConfigureAwait(false);
+            await handler(frame.Payload, cancellationToken).ConfigureAwait(false);
+        }, FailDispatch);
     }
 
     private async ValueTask DispatchStreamRequestAsync(
@@ -1143,7 +1157,7 @@ public sealed class RpcConnection : IAsyncDisposable
             }
         }
 
-        public void Dispatch(Func<ValueTask> dispatch, Action<Exception> failed)
+        public Task Dispatch(Func<ValueTask> dispatch, Action<Exception> failed)
         {
             Task tracked;
             lock (_dispatchGate)
@@ -1156,6 +1170,7 @@ public sealed class RpcConnection : IAsyncDisposable
             }
 
             tracked.GetAwaiter().OnCompleted(() => RemoveDispatch(tracked));
+            return tracked;
         }
 
         public async Task WaitForDispatchesAsync()
