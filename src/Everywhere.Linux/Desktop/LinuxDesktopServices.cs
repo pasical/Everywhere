@@ -82,6 +82,11 @@ public sealed class LinuxDesktopServices
             services.Replace(ServiceDescriptor.Singleton<IShortcutListener>(sp =>
                 new LinuxShortcutListener(sp.GetRequiredService<InputHostShortcutListener>())));
         }
+        else if (desktop.Kind is LinuxDesktopKind.PlasmaWayland or LinuxDesktopKind.GnomeWayland or LinuxDesktopKind.X11)
+        {
+            services.AddSingleton<PortalShortcutListener>();
+            services.AddSingleton<IShortcutListener>(sp => new LinuxShortcutListener(sp.GetRequiredService<PortalShortcutListener>()));
+        }
         else
         {
             services.AddSingleton<IShortcutListener>(new LinuxShortcutListener(null));

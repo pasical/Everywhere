@@ -227,3 +227,7 @@ The verified desktop-tools configuration is generation 5. A guest reboot loaded
 the exact promoted closure, started the modifier service, retained fastfetch and
 kept generation-4 and earlier boot entries. Post-reboot Plasma X11 rendering,
 Ctrl+F and modifier release were verified again.
+
+Subsequent global shortcut registration and the Linux activation-session identity
+fix are documented in [desktop shortcut validation](LinuxDesktopShortcutValidation.md).
+Those changes retain RpcConnection message handling and the rendering policy above.
