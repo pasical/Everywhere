@@ -174,7 +174,7 @@ public static class Program
             builder = builder.UseWaylandWithFallback();
         }
 
-        if (desktop.Kind is LinuxDesktopKind.PlasmaWayland or LinuxDesktopKind.GnomeWayland)
+        if (desktop.IsStandardWayland)
         {
             // Avalonia 12.1 recreates hidden Wayland surfaces without restoring
             // the no-decoration request. Keep client decorations consistent

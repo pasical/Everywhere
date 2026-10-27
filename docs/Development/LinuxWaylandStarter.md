@@ -1,6 +1,6 @@
 ﻿# Ordinary Wayland desktop starter
 
-Plasma and GNOME Wayland start through Avalonia.Wayland's ordinary toplevel and text-input
+Plasma, GNOME and Niri Wayland start through Avalonia.Wayland's ordinary toplevel and text-input
 implementation. It does not install `HyprlandWindowingPlatform`, issue compositor
 commands, assign guessed global coordinates or reuse Hyprland's input bindings.
 `StandardWaylandWindowController` permits ordinary floating-application intent
@@ -23,7 +23,7 @@ no separate input-method implementation or dependency is introduced here.
 
 ## Validation
 
-In a disposable Plasma or GNOME session, launch actual Main/Chat with the session's
+In a disposable Plasma, GNOME or Niri session, launch actual Main/Chat with the session's
 native input method. Check preedit, candidate placement, Unicode commits and focus
 transitions. Both authenticated Hosts should remain healthy without recovery loops.
 Global observation, overlays, silent capture and shortcuts must report their
@@ -36,8 +36,11 @@ distribution coverage or multi-monitor acceptance.
 ## Main and Chat rendering
 
 StandardWaylandWindowAppearance supplies opaque theme-aware backgrounds and
-ordinary Main controls on Plasma/GNOME. Chat retains its own title bar and requests
-native resizing from its edges. The platform uses drawn decorations consistently
+ordinary Main controls on Plasma/GNOME/Niri. Main and Chat request native resizing
+from their edges. Chat retains its own title bar and accepts compositor-driven
+sizes in both tiled and floating layouts, including after a minimum-size reset.
+The ShadUI theme's unpainted shadow reserve is disabled so it does not leave a
+transparent band between the client and frame. The platform uses drawn decorations consistently
 across Hide/Show to avoid Avalonia 12.1.3 renegotiating a second KWin title bar.
-See [the local dual-desktop validation](LinuxDesktopWaylandValidation.md) for the
+See [the local desktop validation](LinuxDesktopWaylandValidation.md) for the
 reproductions, experimental-option rationale, test failures and acceptance limits.

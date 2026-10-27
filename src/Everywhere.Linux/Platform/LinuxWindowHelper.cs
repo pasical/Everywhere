@@ -125,7 +125,7 @@ public sealed partial class LinuxWindowHelper(
     /// <inheritdoc />
     public void InitializeWindow(Window window)
     {
-        if (desktop.Kind is LinuxDesktopKind.PlasmaWayland or LinuxDesktopKind.GnomeWayland)
+        if (desktop.IsStandardWayland)
         {
             StandardWaylandWindowAppearance.Configure(window);
         }

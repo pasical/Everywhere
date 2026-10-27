@@ -29,6 +29,17 @@ public sealed class LinuxDesktopServices
     public LinuxDesktopKind Kind { get; }
 
     /// <summary>
+    /// Gets whether ordinary Wayland toplevels provide this desktop's UI integration.
+    /// </summary>
+    public bool IsStandardWayland
+    {
+        get
+        {
+            return Kind is LinuxDesktopKind.PlasmaWayland or LinuxDesktopKind.GnomeWayland or LinuxDesktopKind.NiriWayland;
+        }
+    }
+
+    /// <summary>
     /// Gets the selected compositor state provider.
     /// </summary>
     public ICompositorStateProvider Compositor { get; }
@@ -85,7 +96,7 @@ public sealed class LinuxDesktopServices
     public static LinuxDesktopServices Create()
     {
         var kind = DetectSession();
-        if (kind is LinuxDesktopKind.PlasmaWayland or LinuxDesktopKind.GnomeWayland)
+        if (kind is LinuxDesktopKind.PlasmaWayland or LinuxDesktopKind.GnomeWayland or LinuxDesktopKind.NiriWayland)
         {
             return CreateStandardWayland(kind);
         }
@@ -184,6 +195,11 @@ public sealed class LinuxDesktopServices
             if (desktopNames.Contains("GNOME", StringComparer.OrdinalIgnoreCase))
             {
                 return LinuxDesktopKind.GnomeWayland;
+            }
+
+            if (desktopNames.Contains("niri", StringComparer.OrdinalIgnoreCase))
+            {
+                return LinuxDesktopKind.NiriWayland;
             }
 
             if (desktopNames.Length > 0 && !desktopNames.Contains("Hyprland", StringComparer.OrdinalIgnoreCase))

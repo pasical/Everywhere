@@ -24,10 +24,36 @@ internal static class StandardWaylandWindowResize
     /// </summary>
     public static void Configure(Window window)
     {
+        // The compositor also resizes tiled windows without a pointer gesture.
+        // Keep their initial size usable, then accept subsequent configure events.
+        window.SizeToContent = SizeToContent.Manual;
+        if (!double.IsFinite(window.Width))
+        {
+            window.Width = window.MinWidth;
+        }
+
+        if (!double.IsFinite(window.Height))
+        {
+            window.Height = window.MinHeight;
+        }
+
+        window.Resized -= HandleResized;
+        window.Resized += HandleResized;
         window.RemoveHandler(InputElement.PointerPressedEvent, HandlePointerPressed);
         window.RemoveHandler(InputElement.PointerMovedEvent, HandlePointerMoved);
         window.AddHandler(InputElement.PointerPressedEvent, HandlePointerPressed, RoutingStrategies.Tunnel);
         window.AddHandler(InputElement.PointerMovedEvent, HandlePointerMoved, RoutingStrategies.Tunnel);
+    }
+
+    private static void HandleResized(object? sender, WindowResizedEventArgs args)
+    {
+        if (sender is Window window && args.Reason == WindowResizeReason.Layout)
+        {
+            // Chat restores automatic sizing at its minimum size. A later native
+            // configure must be manual again before Chat's OnResized latch runs;
+            // Window raises this event from its base OnResized implementation.
+            window.SizeToContent = SizeToContent.Manual;
+        }
     }
 
     private static void HandlePointerPressed(object? sender, PointerPressedEventArgs args)

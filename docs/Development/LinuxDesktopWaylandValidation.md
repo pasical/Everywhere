@@ -103,3 +103,79 @@ build because official account build constants are absent.
 
 The existing fixed-size welcome guidance can clip in a small restored Main window;
 maximizing makes it operable. Its shared dialog layout has not been changed here.
+
+## Follow-up: frame gap, Hyprland regression and Niri
+
+The earlier visual acceptance missed an 8-DIP transparent band between Main's
+client area and the drawn frame. ShadUI sets DefaultShadowThickness to 8 but does
+not paint a shadow. Avalonia includes that thickness in the client/decorations
+insets, which exposes the wallpaper in the unused area. The standard-desktop
+style now sets DefaultShadowThickness to zero. This is scoped to the application's
+standard Wayland setup; no third-party submodule is modified.
+
+Main shares Chat's 8-DIP client-edge resize gestures so removing the empty reserve
+does not remove the useful resize target. Actual GNOME dragging expanded a restored
+Main from approximately 927x575 to 1037x647, with no transparent band. Both restored
+Plasma and GNOME windows were visually checked against the earlier screenshots.
+Evidence includes frame-baseline.png, frame-fixed-plasma-main.png,
+gnome-frame-no-gap.png and gnome-final-main-edge-resize.png.
+
+Niri is explicitly detected through the inherited desktop name and selects the
+same standard toplevel backend. IsStandardWayland groups the three implemented
+standard desktop routes; inherited Hyprland markers cannot override an explicit
+Niri desktop. Global capabilities remain unavailable, exactly as on Plasma/GNOME.
+
+Actual Niri testing exposed another sizing issue: automatic Chat content sizing
+rejected compositor tiling requests and kept returning 400x300. Standard Wayland
+windows now start with manual sizing and accept subsequent Layout configure
+events. A resize event handler restores manual mode before Chat's shared latch
+runs, including after its minimum-size automatic reset. Hyprland is excluded from
+this policy. Niri accepted a 732x596 tiled Chat, native floating edge dragging,
+a 400x300 minimum followed by expansion to 600x450, keyboard text entry and
+Hide/Show without a second title bar. Niri controls whether a remapped window is
+tiled or floating; the app does not pretend to preserve compositor-owned mode.
+
+### VM coverage and limits
+
+The local VM now installs Hyprland 0.55.4 and Niri 26.04 alongside Plasma/GNOME.
+Actual Hyprland sessions ran the saved 30b15575 build and the candidate build:
+Main/Chat rendered, Ctrl+Shift+E opened Chat, keyboard input worked, and two Host
+RPC connections authenticated. The final source changes are still excluded from
+Hyprland's appearance/resize backend. This is focused rendering/input regression
+coverage, not a repeat of the full selection/capture/IME acceptance matrix.
+
+Niri's independent DRM session did not produce an output on this VM. The matching
+Niri source explicitly rejects software EGL devices, and its logs report
+"software EGL renderers are skipped" followed by "no allocator available for device".
+Its IPC output map was empty; Avalonia then failed because no wl_output existed.
+No application workaround is used to conceal that environment failure.
+
+Niri UI acceptance instead used a real nested Niri compositor (winit backend)
+inside the VM, first on Hyprland and then through the desktop helper on GNOME.
+The app connected to Niri's own Wayland socket and logged NiriWayland, not Hyprland.
+Niri's IPC listed the application's windows and accepted native layout actions.
+This validates the Niri application path while leaving standalone DRM and physical
+GPU acceptance outstanding. The VM provides an Everywhere in Niri (Nested) menu
+entry and start-niri-test helper for this lane. Global shortcuts/overlays/capture
+and full input-method acceptance are still future Niri integration work.
+
+Final Linux regression: 89 passed, 0 failed (linux-standard-final.trx). The two
+additional cases cover Niri identity and inherited Hyprland-marker isolation.
+The historical Core failures above were not changed or rerun in this follow-up;
+this follow-up does not modify shared Core or RPC code.
+
+### NixOS rollback practice
+
+The original verified system is generation 2 and is protected by the
+/nix/var/nix/gcroots/everywhere-pre-compositors GC root. The new configuration was
+built, temporarily activated with test, reverted to that exact baseline closure,
+then restored to the candidate before promotion. The verified multi-desktop
+configuration is generation 3; boot entries 1, 2 and 3 remain available.
+
+Hyprland/Niri test configurations are managed under /etc/everywhere-vm by the
+NixOS closure, and user config paths point there. Source configuration checkpoints
+are kept separately under /etc/nixos/checkpoints. The host rollback-vm.sh restores
+both the baseline source configuration and its system profile before switching.
+NixOS rollback does not revert home directories or application data: immutable
+application build directories, a current build symlink and separate per-desktop
+XDG test profiles provide the application comparison lane.

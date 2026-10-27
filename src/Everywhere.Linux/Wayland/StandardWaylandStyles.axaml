@@ -1,4 +1,9 @@
 ﻿<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- ShadUI reserves shadow space without drawing a shadow. Avoid a transparent
+       strip between the client area and its drawn frame on standard desktops. -->
+  <Style Selector="WindowDrawnDecorations">
+    <Setter Property="DefaultShadowThickness" Value="0"/>
+  </Style>
   <Style Selector="WindowDrawnDecorations:has-titlebar /template/ Panel#PART_TitleBar">
     <Setter Property="Background" Value="{DynamicResource DialogBackgroundColor}"/>
   </Style>

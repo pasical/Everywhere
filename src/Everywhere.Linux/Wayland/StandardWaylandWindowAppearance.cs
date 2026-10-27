@@ -58,13 +58,15 @@ internal static class StandardWaylandWindowAppearance
         }
         else
         {
-            // The chat already has its own title bar. Standard Wayland desktops
-            // need an explicit resize gesture when no native frame is present.
+            // The chat already has its own title bar.
             window.ExtendClientAreaToDecorationsHint = true;
             window.WindowDecorations = WindowDecorations.None;
             window.BorderThickness = new Thickness(1);
-            StandardWaylandWindowResize.Configure(window);
         }
+
+        // The removed shadow margin must not be the only usable resize target.
+        // Both the framed Main and borderless Chat accept gestures on their edges.
+        StandardWaylandWindowResize.Configure(window);
 
         // ShadWindow's theme colors include alpha, and its template does not
         // provide Avalonia's transparency fallback layer. Keep the theme color
