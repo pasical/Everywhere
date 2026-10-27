@@ -16,6 +16,7 @@ using Everywhere.Linux.Desktop;
 using Everywhere.Linux.Interop;
 using Everywhere.Linux.Platform;
 using Everywhere.Linux.ProcessIsolation;
+using Everywhere.Linux.Wayland;
 using Everywhere.ProcessIsolation.Activation;
 using Everywhere.ProcessIsolation.Automation;
 using Everywhere.ProcessIsolation.Hosting;
@@ -171,6 +172,17 @@ public static class Program
         if (desktop.Kind != LinuxDesktopKind.X11)
         {
             builder = builder.UseWaylandWithFallback();
+        }
+
+        if (desktop.Kind is LinuxDesktopKind.PlasmaWayland or LinuxDesktopKind.GnomeWayland)
+        {
+            // Avalonia 12.1 recreates hidden Wayland surfaces without restoring
+            // the no-decoration request. Keep client decorations consistent
+            // across Hide/Show on desktops that offer server decorations.
+#pragma warning disable AVALONIA_WAYLAND_FORCE_CSD
+            builder = builder.With(new WaylandPlatformOptions { ForceDrawnDecorations = true });
+#pragma warning restore AVALONIA_WAYLAND_FORCE_CSD
+            builder = builder.AfterSetup(_ => StandardWaylandWindowAppearance.InstallStyles());
         }
 
         return builder.AfterPlatformServicesSetup(_ =>

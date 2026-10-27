@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Platform;
 using Everywhere.Interop;
 using Everywhere.Linux.Desktop;
+using Everywhere.Linux.Wayland;
 using Everywhere.Views;
 
 namespace Everywhere.Linux.Platform;
@@ -11,7 +12,9 @@ namespace Everywhere.Linux.Platform;
 /// <summary>
 /// Configures owned UI surfaces through the compositor bridge and backend input regions.
 /// </summary>
-public sealed partial class LinuxWindowHelper(IOverlayWindowController overlays) : IWindowHelper, IDisposable
+public sealed partial class LinuxWindowHelper(
+    IOverlayWindowController overlays,
+    LinuxDesktopServices desktop) : IWindowHelper, IDisposable
 {
     private nint _display;
 
@@ -122,6 +125,11 @@ public sealed partial class LinuxWindowHelper(IOverlayWindowController overlays)
     /// <inheritdoc />
     public void InitializeWindow(Window window)
     {
+        if (desktop.Kind is LinuxDesktopKind.PlasmaWayland or LinuxDesktopKind.GnomeWayland)
+        {
+            StandardWaylandWindowAppearance.Configure(window);
+        }
+
         if (window is TextSelectionToolbarWindow)
         {
             overlays.AttachOverlayWindow(window, OverlayRole.SelectionToolbar);

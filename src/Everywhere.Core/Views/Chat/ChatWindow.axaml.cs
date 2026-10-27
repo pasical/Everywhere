@@ -242,7 +242,12 @@ public sealed partial class ChatWindow :
     {
         base.OnResized(e);
 
-        if (e.Reason != WindowResizeReason.User) return;
+        // A manual resize can be reported as a layout change by the windowing backend.
+        if (e.Reason != WindowResizeReason.User &&
+            (e.Reason != WindowResizeReason.Layout || SizeToContent != SizeToContent.Manual))
+        {
+            return;
+        }
 
         if (e.ClientSize.NearlyEquals(new Size(MinWidth, MinHeight)))
         {

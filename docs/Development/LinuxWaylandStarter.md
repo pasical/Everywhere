@@ -32,3 +32,12 @@ unavailable capabilities rather than borrowing Hyprland's session services.
 Use the [Linux acceptance checklist](LinuxHyprlandValidation.md) for shared setup
 and cleanup. Ordinary window/input checks do not establish full desktop parity,
 distribution coverage or multi-monitor acceptance.
+
+## Main and Chat rendering
+
+StandardWaylandWindowAppearance supplies opaque theme-aware backgrounds and
+ordinary Main controls on Plasma/GNOME. Chat retains its own title bar and requests
+native resizing from its edges. The platform uses drawn decorations consistently
+across Hide/Show to avoid Avalonia 12.1.3 renegotiating a second KWin title bar.
+See [the local dual-desktop validation](LinuxDesktopWaylandValidation.md) for the
+reproductions, experimental-option rationale, test failures and acceptance limits.
