@@ -124,3 +124,23 @@ Ordinary test keys were injected through QMP into QEMU's keyboard input path;
 manual macOS Screen Sharing input was not separately repeated. No model request
 or authenticated cloud operation was performed. Physical GPU, standalone Niri
 DRM, full selection/capture and input-method acceptance remain outside this check.
+
+## Permission cancellation regression tests
+
+The explicit `PortalShortcutSessionTests` fixture requires `dbus-daemon` and a
+private session bus. It owns a synthetic portal that deliberately leaves shortcut
+approval pending; it does not use the desktop's portal or show native dialogs.
+Run it separately from the normal Linux suite:
+
+```sh
+dbus-run-session -- sh -c '
+    export EVERYWHERE_PORTAL_TEST_BUS="$DBUS_SESSION_BUS_ADDRESS"
+    dotnet test tests/Everywhere.Linux.Tests/Everywhere.Linux.Tests.csproj -c Release \
+        --filter FullyQualifiedName~PortalShortcutSessionTests
+'
+```
+
+The tests verify that removing a registration closes the pending session, and that
+recording closes it before restoring the same registration set after the lease
+ends. This exercises the real D-Bus request/response and session-close paths;
+it does not establish compositor permission UI or native key activation support.

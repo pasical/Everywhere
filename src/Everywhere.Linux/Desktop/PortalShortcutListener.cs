@@ -132,20 +132,36 @@ public sealed class PortalShortcutListener : IShortcutListener, IAsyncDisposable
                 {
                     continue;
                 }
+                using var request = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
                 try
                 {
-                    session = await PortalShortcutSession.CreateAsync(desired, HandleActivated, _lifetime.Token).ConfigureAwait(false);
+                    var creating = PortalShortcutSession.CreateAsync(desired, HandleActivated, request.Token);
+                    var changed = _changes.Reader.WaitToReadAsync(request.Token).AsTask();
+                    if (await Task.WhenAny(creating, changed).ConfigureAwait(false) == changed)
+                    {
+                        // A permission dialog may remain open indefinitely. A new desired state
+                        // must close that request before recording or removing registrations.
+                        await request.CancelAsync().ConfigureAwait(false);
+                    }
+                    session = await creating.ConfigureAwait(false);
                     _logger.LogInformation("Desktop portal bound {ShortcutCount} keyboard shortcuts.", session.GrantedShortcutCount);
                 }
-                catch (OperationCanceledException) when (_lifetime.IsCancellationRequested)
+                catch (OperationCanceledException) when (request.IsCancellationRequested)
                 {
-                    break;
+                    // The cancelled set was never applied. Even an identical registration set
+                    // must be retried after a recording lease ends.
+                    previous = [];
                 }
                 catch (Exception exception)
                 {
                     // Denial is a user decision, not an Input Host crash. Do not restart the Host
                     // and repeatedly reopen the permission dialog. A setting change can retry.
                     _logger.LogWarning(exception, "Desktop global shortcuts were not granted. Check the desktop's shortcut permissions.");
+                }
+                finally
+                {
+                    // Release the unused channel wait when the portal responds first.
+                    await request.CancelAsync().ConfigureAwait(false);
                 }
             }
         }
