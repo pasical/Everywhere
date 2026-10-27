@@ -1,4 +1,4 @@
-﻿# Plasma and GNOME Wayland rendering validation
+﻿# Linux desktop rendering validation
 
 ## Scope and environment
 
@@ -15,7 +15,7 @@ release workflow, authentication configuration or Hyprland backend was changed.
 
 - Main and Chat exposed the wallpaper or other windows through their backgrounds.
   ShadWindow uses theme colors with alpha, but its template does not supply the
-  framework transparency fallback layer. StandardWaylandWindowAppearance binds an
+  framework transparency fallback layer. StandardDesktopWindowAppearance binds an
   opaque version of the appropriate theme color and follows runtime theme changes.
 - Main lacked ordinary window controls. It now uses full framework decorations on
   Plasma/GNOME. The drawn title bar receives an opaque theme background as well.
@@ -37,8 +37,10 @@ release workflow, authentication configuration or Hyprland backend was changed.
   reflection or KWin rules. Revisit this workaround when upgrading Avalonia.
 
 Appearance bindings are installed once per window and do not keep closed windows
-alive. The setup is selected only for PlasmaWayland and GnomeWayland; Hyprland
-and X11 keep their existing appearance and decoration negotiation.
+alive. The shared desktop appearance is selected for X11 and standard Wayland
+desktops, including Plasma, GNOME and Niri. Hyprland keeps its existing appearance.
+ForceDrawnDecorations is configured only for standard Wayland; X11 continues to
+negotiate native window-manager decorations.
 
 ## Actual desktop checks
 
@@ -111,7 +113,7 @@ client area and the drawn frame. ShadUI sets DefaultShadowThickness to 8 but doe
 not paint a shadow. Avalonia includes that thickness in the client/decorations
 insets, which exposes the wallpaper in the unused area. The standard-desktop
 style now sets DefaultShadowThickness to zero. This is scoped to the application's
-standard Wayland setup; no third-party submodule is modified.
+standard desktop setup; no third-party submodule is modified.
 
 Main shares Chat's 8-DIP client-edge resize gestures so removing the empty reserve
 does not remove the useful resize target. Actual GNOME dragging expanded a restored
@@ -179,3 +181,49 @@ both the baseline source configuration and its system profile before switching.
 NixOS rollback does not revert home directories or application data: immutable
 application build directories, a current build symlink and separate per-desktop
 XDG test profiles provide the application comparison lane.
+
+## Follow-up: X11 controls and the remaining KWin frame seam (2026-10-28)
+
+The earlier appearance setup excluded X11. Consequently its Main still extended
+content into the decorations and retained alpha in its background. The shared
+appearance and resize helpers now live in Everywhere.Linux.Desktop and apply to
+all supported desktop routes except Hyprland. On Plasma X11, Main now requests
+full native decorations with no client-area extension; Main and Chat use the same
+theme-aware opaque backgrounds already exercised on standard Wayland.
+
+A separate 1-DIP transparent strip remained on KWin Wayland after removing the
+shadow reserve. Painting only PART_TitleBar left the enclosing decoration border
+unpainted. StandardDesktopStyles now paints PART_UnderlayWrapper instead, filling
+the complete drawn decoration area with the existing DialogBackgroundColor.
+Actual Plasma Wayland inspection confirms that the top seam is filled.
+
+The self-contained linux-arm64 build succeeded. The Linux suite passed 90 tests,
+including a new X11 opaque-background/full-decoration case, live theme updates and
+Hyprland appearance isolation (linux-x11-chrome.trx). Shared Core and RPC sources
+were not modified, and the historical Core suite was not rerun in this follow-up.
+
+The local VM additionally provides mouse-operated Waybar panels on Hyprland and
+nested Niri, an application grid, a confirmation dialog for session exit, and a
+modifier-only uinput keyboard. The keyboard UI retains the application's keyboard
+focus and can latch multiple modifiers while ordinary QEMU/VNC keyboard events
+supply letters, numbers or Enter. Actual checks include Ctrl+F in Plasma X11 and
+Wayland, Ctrl+Shift+E opening Chat in Hyprland, and Alt+Enter starting Foot in
+nested Niri. The ordinary key events were sent through QMP to the QEMU keyboard
+used by VNC; manual macOS Screen Sharing input was not separately repeated.
+Releasing or closing the UI releases its modifiers. These VM tools are separate
+from the application and do not implement global shortcuts on Niri/Plasma/GNOME.
+Evidence: x11-chrome-ready.png, x11-virtual-ctrl-f-passed.png,
+x11-modifier-release-passed.png, plasma-virtual-ctrl-f.png,
+plasma-modifier-release.png, hyprland-virtual-ctrl-shift-e.png,
+niri-virtual-alt-return.png and niri-mouse-applications.png in the VM directory.
+
+The starting VM had a user-created generation 4 with fastfetch installed; that
+configuration was preserved and pinned as everywhere-pre-desktop-tools. The new
+system was activated with test before promotion, with complete configuration
+sources saved under /etc/nixos/checkpoints/with-desktop-tools. The host helper
+rollback-desktop-tools.sh restores the generation-4 system and its source files.
+This rollback still does not revert home directories or application builds.
+The verified desktop-tools configuration is generation 5. A guest reboot loaded
+the exact promoted closure, started the modifier service, retained fastfetch and
+kept generation-4 and earlier boot entries. Post-reboot Plasma X11 rendering,
+Ctrl+F and modifier release were verified again.

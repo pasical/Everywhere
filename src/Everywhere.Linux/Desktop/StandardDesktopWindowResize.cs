@@ -4,12 +4,12 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 
-namespace Everywhere.Linux.Wayland;
+namespace Everywhere.Linux.Desktop;
 
 /// <summary>
-/// Allows a client-decorated window to request native Wayland resizing.
+/// Allows a client-decorated window to request native window resizing.
 /// </summary>
-internal static class StandardWaylandWindowResize
+internal static class StandardDesktopWindowResize
 {
     private const double GripThickness = 8;
     private static readonly Cursor HorizontalCursor = new(StandardCursorType.SizeWestEast);

@@ -4,7 +4,7 @@
   <Style Selector="WindowDrawnDecorations">
     <Setter Property="DefaultShadowThickness" Value="0"/>
   </Style>
-  <Style Selector="WindowDrawnDecorations:has-titlebar /template/ Panel#PART_TitleBar">
+  <Style Selector="WindowDrawnDecorations /template/ Panel#PART_UnderlayWrapper">
     <Setter Property="Background" Value="{DynamicResource DialogBackgroundColor}"/>
   </Style>
 </Styles>

@@ -11,26 +11,26 @@ using Avalonia.Media;
 using Avalonia.Platform;
 using Everywhere.Views;
 
-namespace Everywhere.Linux.Wayland;
+namespace Everywhere.Linux.Desktop;
 
 /// <summary>
-/// Provides readable window backgrounds on ordinary Wayland desktops where
+/// Provides readable window backgrounds on ordinary Linux desktops where
 /// the requested compositor blur is unavailable.
 /// </summary>
-internal static class StandardWaylandWindowAppearance
+internal static class StandardDesktopWindowAppearance
 {
     private static readonly IMultiValueConverter OpaqueBackgroundConverter = new OpaqueColorConverter();
     private static readonly ConditionalWeakTable<Window, object> ConfiguredWindows = new();
 
     /// <summary>
-    /// Installs the opaque title bar used by standard Wayland desktop windows.
+    /// Installs opaque decorations without unused shadow space on standard Linux desktops.
     /// </summary>
     public static void InstallStyles()
     {
         var application = Application.Current ?? throw new InvalidOperationException("Application is not initialized.");
         application.Styles.Add(new StyleInclude(new Uri("avares://Everywhere/"))
         {
-            Source = new Uri("avares://Everywhere/Wayland/StandardWaylandStyles.axaml"),
+            Source = new Uri("avares://Everywhere/Desktop/StandardDesktopStyles.axaml"),
         });
     }
 
@@ -66,7 +66,7 @@ internal static class StandardWaylandWindowAppearance
 
         // The removed shadow margin must not be the only usable resize target.
         // Both the framed Main and borderless Chat accept gestures on their edges.
-        StandardWaylandWindowResize.Configure(window);
+        StandardDesktopWindowResize.Configure(window);
 
         // ShadWindow's theme colors include alpha, and its template does not
         // provide Avalonia's transparency fallback layer. Keep the theme color

@@ -16,7 +16,6 @@ using Everywhere.Linux.Desktop;
 using Everywhere.Linux.Interop;
 using Everywhere.Linux.Platform;
 using Everywhere.Linux.ProcessIsolation;
-using Everywhere.Linux.Wayland;
 using Everywhere.ProcessIsolation.Activation;
 using Everywhere.ProcessIsolation.Automation;
 using Everywhere.ProcessIsolation.Hosting;
@@ -182,7 +181,11 @@ public static class Program
 #pragma warning disable AVALONIA_WAYLAND_FORCE_CSD
             builder = builder.With(new WaylandPlatformOptions { ForceDrawnDecorations = true });
 #pragma warning restore AVALONIA_WAYLAND_FORCE_CSD
-            builder = builder.AfterSetup(_ => StandardWaylandWindowAppearance.InstallStyles());
+        }
+
+        if (desktop.Kind != LinuxDesktopKind.Hyprland)
+        {
+            builder = builder.AfterSetup(_ => StandardDesktopWindowAppearance.InstallStyles());
         }
 
         return builder.AfterPlatformServicesSetup(_ =>

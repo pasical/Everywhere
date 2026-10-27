@@ -4,7 +4,6 @@ using Avalonia.Controls;
 using Avalonia.Platform;
 using Everywhere.Interop;
 using Everywhere.Linux.Desktop;
-using Everywhere.Linux.Wayland;
 using Everywhere.Views;
 
 namespace Everywhere.Linux.Platform;
@@ -125,9 +124,9 @@ public sealed partial class LinuxWindowHelper(
     /// <inheritdoc />
     public void InitializeWindow(Window window)
     {
-        if (desktop.IsStandardWayland)
+        if (desktop.Kind != LinuxDesktopKind.Hyprland)
         {
-            StandardWaylandWindowAppearance.Configure(window);
+            StandardDesktopWindowAppearance.Configure(window);
         }
 
         if (window is TextSelectionToolbarWindow)

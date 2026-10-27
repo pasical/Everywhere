@@ -12,7 +12,7 @@ using Everywhere.Views;
 namespace Everywhere.Linux.Tests;
 
 [NonParallelizable]
-public sealed class StandardWaylandWindowAppearanceTests
+public sealed class StandardDesktopWindowAppearanceTests
 {
     [AvaloniaTest]
     public void GnomeWindow_UsesOpaqueBackgroundAndFollowsThemeChanges()
@@ -54,6 +54,32 @@ public sealed class StandardWaylandWindowAppearanceTests
     }
 
     [AvaloniaTest]
+    public void X11Window_UsesOpaqueBackgroundAndFullDecorations()
+    {
+        using var session = new TestSession("X11");
+        var desktop = LinuxDesktopServices.Create();
+        using var helper = new LinuxWindowHelper(desktop.Overlays, desktop);
+        var window = new TransientWindow();
+        try
+        {
+            window.Resources["WindowBackgroundColor"] = Color.FromArgb(90, 20, 40, 60);
+            helper.InitializeWindow(window);
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            Assert.Multiple(() =>
+            {
+                Assert.That(((ISolidColorBrush)window.Background!).Color, Is.EqualTo(Color.FromRgb(20, 40, 60)));
+                Assert.That(window.WindowDecorations, Is.EqualTo(WindowDecorations.Full));
+                Assert.That(window.ExtendClientAreaToDecorationsHint, Is.False);
+            });
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [AvaloniaTest]
     public void HyprlandWindow_KeepsItsOriginalAppearance()
     {
         using var session = new TestSession("Hyprland");
@@ -85,10 +111,10 @@ public sealed class StandardWaylandWindowAppearanceTests
 
         public TestSession(string desktop)
         {
-            Set("XDG_SESSION_TYPE", "wayland");
+            Set("XDG_SESSION_TYPE", desktop == "X11" ? "x11" : "wayland");
             Set("XDG_CURRENT_DESKTOP", desktop);
             Set("WAYLAND_DISPLAY", "test-wayland");
-            Set("DISPLAY", null);
+            Set("DISPLAY", desktop == "X11" ? ":99" : null);
             Set("HYPRLAND_INSTANCE_SIGNATURE", desktop == "Hyprland" ? "test-instance" : null);
             Set("XDG_RUNTIME_DIR", "/tmp");
         }

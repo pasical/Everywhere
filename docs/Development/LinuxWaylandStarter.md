@@ -35,12 +35,14 @@ distribution coverage or multi-monitor acceptance.
 
 ## Main and Chat rendering
 
-StandardWaylandWindowAppearance supplies opaque theme-aware backgrounds and
-ordinary Main controls on Plasma/GNOME/Niri. Main and Chat request native resizing
-from their edges. Chat retains its own title bar and accepts compositor-driven
+StandardDesktopWindowAppearance supplies opaque theme-aware backgrounds and
+ordinary Main controls on Plasma/GNOME/Niri. The shared appearance also applies
+to X11, which retains native window-manager decoration negotiation. Main and Chat
+request native resizing from their edges. Chat retains its own title bar and accepts compositor-driven
 sizes in both tiled and floating layouts, including after a minimum-size reset.
 The ShadUI theme's unpainted shadow reserve is disabled so it does not leave a
-transparent band between the client and frame. The platform uses drawn decorations consistently
-across Hide/Show to avoid Avalonia 12.1.3 renegotiating a second KWin title bar.
+transparent band between the client and frame. The complete drawn decoration
+underlay is painted to avoid a remaining transparent KWin border seam. Standard
+Wayland uses drawn decorations consistently across Hide/Show to avoid Avalonia 12.1.3 renegotiating a second KWin title bar.
 See [the local desktop validation](LinuxDesktopWaylandValidation.md) for the
 reproductions, experimental-option rationale, test failures and acceptance limits.
