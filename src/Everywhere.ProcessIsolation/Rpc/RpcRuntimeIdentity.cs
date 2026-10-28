@@ -83,11 +83,16 @@ public static class RpcRuntimeIdentity
             if (!string.IsNullOrEmpty(waylandDisplay))
             {
                 var runtimeDirectory = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR");
-                var socketPath = Path.IsPathFullyQualified(waylandDisplay)
-                    ? Path.GetFullPath(waylandDisplay)
-                    : !string.IsNullOrEmpty(runtimeDirectory) && Path.IsPathFullyQualified(runtimeDirectory)
-                        ? Path.GetFullPath(waylandDisplay, runtimeDirectory)
-                        : waylandDisplay;
+                var socketPath = waylandDisplay;
+                if (Path.IsPathFullyQualified(waylandDisplay))
+                {
+                    socketPath = Path.GetFullPath(waylandDisplay);
+                }
+                else if (!string.IsNullOrEmpty(runtimeDirectory) && Path.IsPathFullyQualified(runtimeDirectory))
+                {
+                    socketPath = Path.GetFullPath(waylandDisplay, runtimeDirectory);
+                }
+
                 return "wayland:" + socketPath;
             }
 

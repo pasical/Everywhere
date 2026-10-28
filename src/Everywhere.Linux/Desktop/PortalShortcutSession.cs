@@ -10,9 +10,9 @@ namespace Everywhere.Linux.Desktop;
 /// </summary>
 internal sealed class PortalShortcutSession : IAsyncDisposable
 {
-    private const string Service = "org.freedesktop.portal.Desktop";
-    private const string Path = "/org/freedesktop/portal/desktop";
-    private const string Interface = "org.freedesktop.portal.GlobalShortcuts";
+    private const string PortalServiceName = "org.freedesktop.portal.Desktop";
+    private const string PortalObjectPath = "/org/freedesktop/portal/desktop";
+    private const string GlobalShortcutsInterface = "org.freedesktop.portal.GlobalShortcuts";
 
     /// <summary>
     /// Gets the number of shortcuts actually granted by the desktop.
@@ -107,9 +107,26 @@ internal sealed class PortalShortcutSession : IAsyncDisposable
         return string.Join('+', parts);
     }
 
-    private async Task InitializeAsync(KeyboardShortcut[] shortcuts, Action<string> activated, CancellationToken cancellationToken)
+    private async Task InitializeAsync(KeyboardShortcut[] shortcuts, Action<string> onActivated, CancellationToken cancellationToken)
     {
         await _connection.ConnectAsync().AsTask().WaitAsync(cancellationToken).ConfigureAwait(false);
+        await RegisterApplicationAsync(cancellationToken).ConfigureAwait(false);
+
+        var sessionResult = await RequestAsync("CreateSession", sessionPath: null, shortcuts: [], cancellationToken).ConfigureAwait(false);
+        _sessionPath = sessionResult["session_handle"].GetString();
+        await WatchActivationsAsync(onActivated).ConfigureAwait(false);
+
+        var bindingResult = await RequestAsync("BindShortcuts", _sessionPath, shortcuts, cancellationToken).ConfigureAwait(false);
+        if (!bindingResult.TryGetValue("shortcuts", out var grantedShortcuts) || grantedShortcuts.Count == 0)
+        {
+            throw new InvalidOperationException("The desktop did not grant any global shortcuts.");
+        }
+
+        GrantedShortcutCount = grantedShortcuts.Count;
+    }
+
+    private async Task RegisterApplicationAsync(CancellationToken cancellationToken)
+    {
         try
         {
             await _connection.CallMethodAsync(CreateRegistryRequest()).WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -118,16 +135,17 @@ internal sealed class PortalShortcutSession : IAsyncDisposable
         {
             // Older portals infer the identity from the process instead of offering Registry.
         }
+    }
 
-        var created = await RequestAsync("CreateSession", null, [], cancellationToken).ConfigureAwait(false);
-        _sessionPath = created["session_handle"].GetString();
+    private async Task WatchActivationsAsync(Action<string> onActivated)
+    {
         _activationWatch = await _connection.AddMatchAsync(
             new MatchRule
             {
                 Type = MessageType.Signal,
-                Sender = Service,
-                Path = Path,
-                Interface = Interface,
+                Sender = PortalServiceName,
+                Path = PortalObjectPath,
+                Interface = GlobalShortcutsInterface,
                 Member = "Activated",
             },
             static (message, _) =>
@@ -137,27 +155,23 @@ internal sealed class PortalShortcutSession : IAsyncDisposable
             },
             notification =>
             {
-                if (notification.HasValue && notification.Value.Session == _sessionPath)
+                if (!notification.HasValue || notification.Value.Session != _sessionPath)
                 {
-                    // Application callbacks may marshal to the UI thread. Never block the bus reader.
-                    ThreadPool.QueueUserWorkItem(_ =>
-                    {
-                        if (!Volatile.Read(ref _isDisposed))
-                        {
-                            activated(notification.Value.Id);
-                        }
-                    });
+                    return;
                 }
+
+                // Application callbacks may marshal to the UI thread. Never block the bus reader.
+                ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    if (!Volatile.Read(ref _isDisposed))
+                    {
+                        onActivated(notification.Value.Id);
+                    }
+                });
             },
             emitOnCapturedContext: false,
             flags: ObserverFlags.None,
             state: null).ConfigureAwait(false);
-        var bound = await RequestAsync("BindShortcuts", _sessionPath, shortcuts, cancellationToken).ConfigureAwait(false);
-        if (!bound.TryGetValue("shortcuts", out var granted) || granted.Count == 0)
-        {
-            throw new InvalidOperationException("The desktop did not grant any global shortcuts.");
-        }
-        GrantedShortcutCount = granted.Count;
     }
 
     private async Task<Dictionary<string, VariantValue>> RequestAsync(
@@ -168,13 +182,13 @@ internal sealed class PortalShortcutSession : IAsyncDisposable
     {
         var token = "everywhere_" + Guid.NewGuid().ToString("N");
         var uniqueName = _connection.UniqueName ?? throw new InvalidOperationException("The session bus has no connection identity.");
-        var requestPath = Path + "/request/" + uniqueName.TrimStart(':').Replace('.', '_') + "/" + token;
+        var requestPath = PortalObjectPath + "/request/" + uniqueName.TrimStart(':').Replace('.', '_') + "/" + token;
         var completion = new TaskCompletionSource<Dictionary<string, VariantValue>>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var watch = await _connection.AddMatchAsync(
             new MatchRule
             {
                 Type = MessageType.Signal,
-                Sender = Service,
+                Sender = PortalServiceName,
                 Path = requestPath,
                 Interface = "org.freedesktop.portal.Request",
                 Member = "Response",
@@ -186,21 +200,22 @@ internal sealed class PortalShortcutSession : IAsyncDisposable
             },
             notification =>
             {
-                if (notification.HasValue)
+                if (!notification.HasValue)
                 {
-                    if (notification.Value.Code == 0)
+                    if (notification.IsCompletion)
                     {
-                        completion.TrySetResult(notification.Value.Results);
+                        completion.TrySetException(notification.Exception);
                     }
-                    else
-                    {
-                        completion.TrySetException(new InvalidOperationException($"The desktop declined {method} ({notification.Value.Code})."));
-                    }
+                    return;
                 }
-                else if (notification.IsCompletion)
+
+                if (notification.Value.Code != 0)
                 {
-                    completion.TrySetException(notification.Exception);
+                    completion.TrySetException(new InvalidOperationException($"The desktop declined {method} ({notification.Value.Code})."));
+                    return;
                 }
+
+                completion.TrySetResult(notification.Value.Results);
             },
             emitOnCapturedContext: false,
             flags: ObserverFlags.EmitOnConnectionClosed | ObserverFlags.EmitOnReaderFailed,
@@ -213,16 +228,23 @@ internal sealed class PortalShortcutSession : IAsyncDisposable
     private MessageBuffer CreateCloseRequest(string sessionPath)
     {
         using var writer = _connection.GetMessageWriter();
-        writer.WriteMethodCallHeader(destination: Service, path: sessionPath,
-            @interface: "org.freedesktop.portal.Session", member: "Close");
+        writer.WriteMethodCallHeader(
+            destination: PortalServiceName,
+            path: sessionPath,
+            @interface: "org.freedesktop.portal.Session",
+            member: "Close");
         return writer.CreateMessage();
     }
 
     private MessageBuffer CreateRegistryRequest()
     {
         using var writer = _connection.GetMessageWriter();
-        writer.WriteMethodCallHeader(destination: Service, path: Path,
-            @interface: "org.freedesktop.host.portal.Registry", member: "Register", signature: "sa{sv}");
+        writer.WriteMethodCallHeader(
+            destination: PortalServiceName,
+            path: PortalObjectPath,
+            @interface: "org.freedesktop.host.portal.Registry",
+            member: "Register",
+            signature: "sa{sv}");
         writer.WriteString("com.Sylinko.Everywhere");
         writer.WriteDictionary(new Dictionary<string, VariantValue>());
         return writer.CreateMessage();
@@ -231,8 +253,12 @@ internal sealed class PortalShortcutSession : IAsyncDisposable
     private MessageBuffer CreateShortcutRequest(string method, string token, string? sessionPath, KeyboardShortcut[] shortcuts)
     {
         using var writer = _connection.GetMessageWriter();
-        writer.WriteMethodCallHeader(destination: Service, path: Path, @interface: Interface,
-            member: method, signature: sessionPath is null ? "a{sv}" : "oa(sa{sv})sa{sv}");
+        writer.WriteMethodCallHeader(
+            destination: PortalServiceName,
+            path: PortalObjectPath,
+            @interface: GlobalShortcutsInterface,
+            member: method,
+            signature: sessionPath is null ? "a{sv}" : "oa(sa{sv})sa{sv}");
         if (sessionPath is not null)
         {
             writer.WriteObjectPath(sessionPath);
@@ -248,7 +274,7 @@ internal sealed class PortalShortcutSession : IAsyncDisposable
                 });
             }
             writer.WriteArrayEnd(array);
-            writer.WriteString("");
+            writer.WriteString(""); // No exported parent window is available.
         }
         var options = new Dictionary<string, VariantValue> { ["handle_token"] = token };
         if (sessionPath is null)

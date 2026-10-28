@@ -38,14 +38,14 @@ public sealed class StandardDesktopWindowAppearanceTests
 
             Assert.Multiple(() =>
             {
-                Assert.That(((ISolidColorBrush)window.Background!).Color, Is.EqualTo(Color.FromRgb(20, 40, 60)));
+                Assert.That((window.Background as ISolidColorBrush)?.Color, Is.EqualTo(Color.FromRgb(20, 40, 60)));
                 Assert.That(window.TransparencyLevelHint, Is.EqualTo(new[] { WindowTransparencyLevel.None }));
                 Assert.That(window.WindowDecorations, Is.EqualTo(WindowDecorations.Full));
             });
 
             window.RequestedThemeVariant = ThemeVariant.Dark;
             Dispatcher.UIThread.RunJobs();
-            Assert.That(((ISolidColorBrush)window.Background!).Color, Is.EqualTo(Color.FromRgb(70, 80, 90)));
+            Assert.That((window.Background as ISolidColorBrush)?.Color, Is.EqualTo(Color.FromRgb(70, 80, 90)));
         }
         finally
         {
@@ -68,7 +68,7 @@ public sealed class StandardDesktopWindowAppearanceTests
             Dispatcher.UIThread.RunJobs();
             Assert.Multiple(() =>
             {
-                Assert.That(((ISolidColorBrush)window.Background!).Color, Is.EqualTo(Color.FromRgb(20, 40, 60)));
+                Assert.That((window.Background as ISolidColorBrush)?.Color, Is.EqualTo(Color.FromRgb(20, 40, 60)));
                 Assert.That(window.WindowDecorations, Is.EqualTo(WindowDecorations.Full));
                 Assert.That(window.ExtendClientAreaToDecorationsHint, Is.False);
             });

@@ -51,8 +51,10 @@ public sealed class PortalShortcutListener : IShortcutListener, IAsyncDisposable
                 handlers = [];
                 _handlers.Add(shortcut, handlers);
             }
+
             handlers.Add(handler);
         }
+
         SignalChanged();
         return new Registration(this, shortcut, handler);
     }
@@ -88,9 +90,11 @@ public sealed class PortalShortcutListener : IShortcutListener, IAsyncDisposable
             {
                 return;
             }
+
             _isDisposed = true;
             _handlers.Clear();
         }
+
         await _lifetime.CancelAsync().ConfigureAwait(false);
         _changes.Writer.TryComplete();
         await _runTask.ConfigureAwait(false);
@@ -99,69 +103,55 @@ public sealed class PortalShortcutListener : IShortcutListener, IAsyncDisposable
 
     private async Task RunAsync()
     {
-        PortalShortcutSession? session = null;
-        KeyboardShortcut[] previous = [];
+        var session = default(PortalShortcutSession);
+        var previousShortcuts = Array.Empty<KeyboardShortcut>();
         try
         {
             await foreach (var change in _changes.Reader.ReadAllAsync(_lifetime.Token).ConfigureAwait(false))
             {
+                // Coalesce changes before taking one snapshot of the desired registrations.
                 while (_changes.Reader.TryRead(out _))
                 {
                 }
-                KeyboardShortcut[] desired;
-                lock (_gate)
-                {
-                    desired = _suspension is null
-                        ? _handlers.Keys.OrderBy(key => (int)key.Modifiers).ThenBy(key => (int)key.Key).ToArray()
-                        : [];
-                }
-                if (desired.SequenceEqual(previous))
+
+                var desiredShortcuts = GetDesiredShortcuts();
+                if (desiredShortcuts.SequenceEqual(previousShortcuts))
                 {
                     continue;
                 }
 
-                // BindShortcuts accepts one complete set per session. A dedicated bus connection
-                // makes disposal release both the session and any unfinished permission request.
+                // BindShortcuts accepts one complete set per session. Closing the old
+                // session releases its registrations before requesting the replacement.
                 if (session is not null)
                 {
                     await session.DisposeAsync().ConfigureAwait(false);
                     session = null;
                 }
-                previous = desired;
-                if (desired.Length == 0)
+
+                previousShortcuts = desiredShortcuts;
+                if (desiredShortcuts.Length == 0)
                 {
                     continue;
                 }
-                using var request = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+
                 try
                 {
-                    var creating = PortalShortcutSession.CreateAsync(desired, HandleActivated, request.Token);
-                    var changed = _changes.Reader.WaitToReadAsync(request.Token).AsTask();
-                    if (await Task.WhenAny(creating, changed).ConfigureAwait(false) == changed)
+                    session = await CreateSessionAsync(desiredShortcuts).ConfigureAwait(false);
+                    if (session is null)
                     {
-                        // A permission dialog may remain open indefinitely. A new desired state
-                        // must close that request before recording or removing registrations.
-                        await request.CancelAsync().ConfigureAwait(false);
+                        // The cancelled set was never applied. Even an identical set
+                        // must be retried after a recording lease ends.
+                        previousShortcuts = [];
+                        continue;
                     }
-                    session = await creating.ConfigureAwait(false);
+
                     _logger.LogInformation("Desktop portal bound {ShortcutCount} keyboard shortcuts.", session.GrantedShortcutCount);
-                }
-                catch (OperationCanceledException) when (request.IsCancellationRequested)
-                {
-                    // The cancelled set was never applied. Even an identical registration set
-                    // must be retried after a recording lease ends.
-                    previous = [];
                 }
                 catch (Exception exception)
                 {
                     // Denial is a user decision, not an Input Host crash. Do not restart the Host
                     // and repeatedly reopen the permission dialog. A setting change can retry.
                     _logger.LogWarning(exception, "Desktop global shortcuts were not granted. Check the desktop's shortcut permissions.");
-                }
-                finally
-                {
-                    // Release the unused channel wait when the portal responds first.
-                    await request.CancelAsync().ConfigureAwait(false);
                 }
             }
         }
@@ -177,19 +167,54 @@ public sealed class PortalShortcutListener : IShortcutListener, IAsyncDisposable
         }
     }
 
-    private void HandleActivated(string id)
+    private KeyboardShortcut[] GetDesiredShortcuts()
     {
-        Action[] handlers;
         lock (_gate)
         {
-            if (_isDisposed || _suspension is not null)
+            if (_suspension is not null)
             {
-                return;
+                return [];
             }
-            handlers = _handlers.Where(pair => PortalShortcutSession.ShortcutId(pair.Key) == id)
-                .SelectMany(pair => pair.Value).ToArray();
+
+            return _handlers.Keys
+                .OrderBy(shortcut => (int)shortcut.Modifiers)
+                .ThenBy(shortcut => (int)shortcut.Key)
+                .ToArray();
         }
-        foreach (var handler in handlers)
+    }
+
+    // Returns null when a registration change or shutdown cancels the pending approval.
+    // The session factory releases its connection and any unfinished permission request.
+    private async Task<PortalShortcutSession?> CreateSessionAsync(KeyboardShortcut[] shortcuts)
+    {
+        using var requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+        try
+        {
+            var createSessionTask = PortalShortcutSession.CreateAsync(shortcuts, HandleActivated, requestCancellation.Token);
+            var stateChangedTask = _changes.Reader.WaitToReadAsync(requestCancellation.Token).AsTask();
+            if (await Task.WhenAny(createSessionTask, stateChangedTask).ConfigureAwait(false) == stateChangedTask)
+            {
+                // A permission dialog may remain open indefinitely. A new desired state
+                // must close that request before recording or removing registrations.
+                await requestCancellation.CancelAsync().ConfigureAwait(false);
+            }
+
+            return await createSessionTask.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (requestCancellation.IsCancellationRequested)
+        {
+            return null;
+        }
+        finally
+        {
+            // Release the unused channel wait when the portal responds first.
+            await requestCancellation.CancelAsync().ConfigureAwait(false);
+        }
+    }
+
+    private void HandleActivated(string shortcutId)
+    {
+        foreach (var handler in GetActivationHandlers(shortcutId))
         {
             try
             {
@@ -199,6 +224,23 @@ public sealed class PortalShortcutListener : IShortcutListener, IAsyncDisposable
             {
                 _logger.LogError(exception, "A desktop shortcut callback failed.");
             }
+        }
+    }
+
+    private Action[] GetActivationHandlers(string shortcutId)
+    {
+        lock (_gate)
+        {
+            if (_isDisposed || _suspension is not null)
+            {
+                return [];
+            }
+
+            // Snapshot under the lock; application callbacks run after releasing it.
+            return _handlers
+                .Where(pair => PortalShortcutSession.ShortcutId(pair.Key) == shortcutId)
+                .SelectMany(pair => pair.Value)
+                .ToArray();
         }
     }
 
@@ -216,6 +258,7 @@ public sealed class PortalShortcutListener : IShortcutListener, IAsyncDisposable
                 {
                     return;
                 }
+
                 _isDisposed = true;
                 if (owner._handlers.TryGetValue(shortcut, out var handlers))
                 {
@@ -226,6 +269,7 @@ public sealed class PortalShortcutListener : IShortcutListener, IAsyncDisposable
                     }
                 }
             }
+
             owner.SignalChanged();
         }
     }
@@ -233,6 +277,7 @@ public sealed class PortalShortcutListener : IShortcutListener, IAsyncDisposable
     private sealed class SuspensionScope(PortalShortcutListener owner) : IKeyboardShortcutScope
     {
         public KeyboardShortcut PressingShortcut => default;
+
         public bool IsDisposed { get; private set; }
 
         public event IKeyboardShortcutScope.PressingShortcutChangedHandler? PressingShortcutChanged
@@ -263,12 +308,14 @@ public sealed class PortalShortcutListener : IShortcutListener, IAsyncDisposable
                 {
                     return;
                 }
+
                 IsDisposed = true;
                 if (ReferenceEquals(owner._suspension, this))
                 {
                     owner._suspension = null;
                 }
             }
+
             owner.SignalChanged();
         }
     }

@@ -88,45 +88,19 @@ public sealed class PortalShortcutSessionTests
 
         public ValueTask HandleMethodAsync(MethodContext context)
         {
-            var reader = context.Request.GetBodyReader();
             switch (context.Request.MemberAsString)
             {
                 case "Register":
-                    Reply(context);
+                    ReplyEmptyResponse(context);
                     break;
                 case "CreateSession":
-                    var options = reader.ReadDictionaryOfStringToVariantValue();
-                    var sender = context.Request.SenderAsString ?? throw new InvalidDataException("Missing bus sender.");
-                    var token = options["handle_token"].GetString();
-                    var requestPath = Path + "/request/" + sender.TrimStart(':').Replace('.', '_') + "/" + token;
-                    var sessionPath = Path + "/session/" + token;
-                    using (var writer = context.CreateReplyWriter("o"))
-                    {
-                        writer.WriteObjectPath(requestPath);
-                        context.Reply(writer.CreateMessage());
-                    }
-                    using (var writer = connection.GetMessageWriter())
-                    {
-                        writer.WriteSignalHeader(sender, requestPath, "org.freedesktop.portal.Request", "Response", "ua{sv}");
-                        writer.WriteUInt32(0);
-                        writer.WriteDictionary(new Dictionary<string, VariantValue>
-                        {
-                            ["session_handle"] = sessionPath,
-                        });
-                        connection.TrySendMessage(writer.CreateMessage());
-                    }
+                    HandleCreateSession(context);
                     break;
                 case "BindShortcuts":
-                    var session = reader.ReadObjectPath().ToString();
-                    using (var writer = context.CreateReplyWriter("o"))
-                    {
-                        writer.WriteObjectPath(Path + "/request/pending");
-                        context.Reply(writer.CreateMessage());
-                    }
-                    Bindings.Writer.TryWrite(session);
+                    HandleBindShortcuts(context);
                     break;
                 case "Close":
-                    Reply(context);
+                    ReplyEmptyResponse(context);
                     Closures.Writer.TryWrite(context.Request.PathAsString ?? throw new InvalidDataException("Missing session path."));
                     break;
                 default:
@@ -138,7 +112,47 @@ public sealed class PortalShortcutSessionTests
 
         public void Dispose() => connection.Dispose();
 
-        private static void Reply(MethodContext context)
+        private void HandleCreateSession(MethodContext context)
+        {
+            var reader = context.Request.GetBodyReader();
+            var options = reader.ReadDictionaryOfStringToVariantValue();
+            var sender = context.Request.SenderAsString ?? throw new InvalidDataException("Missing bus sender.");
+            var token = options["handle_token"].GetString();
+            var requestPath = Path + "/request/" + sender.TrimStart(':').Replace('.', '_') + "/" + token;
+            var sessionPath = Path + "/session/" + token;
+            using (var writer = context.CreateReplyWriter("o"))
+            {
+                writer.WriteObjectPath(requestPath);
+                context.Reply(writer.CreateMessage());
+            }
+
+            using (var writer = connection.GetMessageWriter())
+            {
+                writer.WriteSignalHeader(sender, requestPath, "org.freedesktop.portal.Request", "Response", "ua{sv}");
+                writer.WriteUInt32(0);
+                writer.WriteDictionary(new Dictionary<string, VariantValue>
+                {
+                    ["session_handle"] = sessionPath,
+                });
+                connection.TrySendMessage(writer.CreateMessage());
+            }
+        }
+
+        private void HandleBindShortcuts(MethodContext context)
+        {
+            var reader = context.Request.GetBodyReader();
+            var sessionPath = reader.ReadObjectPath().ToString();
+            using (var writer = context.CreateReplyWriter("o"))
+            {
+                writer.WriteObjectPath(Path + "/request/pending");
+                context.Reply(writer.CreateMessage());
+            }
+
+            // Reply with the request handle, but deliberately leave approval pending.
+            Bindings.Writer.TryWrite(sessionPath);
+        }
+
+        private static void ReplyEmptyResponse(MethodContext context)
         {
             using var writer = context.CreateReplyWriter(null);
             context.Reply(writer.CreateMessage());
