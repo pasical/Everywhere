@@ -145,7 +145,7 @@ public sealed class PortalShortcutListener : IShortcutListener, IAsyncDisposable
                         continue;
                     }
 
-                    _logger.LogInformation("Desktop bound {ShortcutCount} keyboard shortcuts.", session.GrantedShortcutCount);
+                    _logger.LogInformation("Desktop portal bound {ShortcutCount} keyboard shortcuts.", session.GrantedShortcutCount);
                 }
                 catch (Exception exception)
                 {
