@@ -197,8 +197,11 @@ UI = TerminalUI()
 
 def receive_with_transport(command, output, limit, show_progress):
     if not show_progress:
-        return subprocess.run(command, timeout=200, stdout=subprocess.DEVNULL,
-                              stderr=subprocess.DEVNULL).returncode
+        try:
+            return subprocess.run(command, timeout=200, stdout=subprocess.DEVNULL,
+                                  stderr=subprocess.DEVNULL).returncode
+        except subprocess.TimeoutExpired as exception:
+            raise DownloadError('Download timed out.') from exception
     with DownloadProgress(limit) as progress:
         process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         deadline = time.monotonic() + 200

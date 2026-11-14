@@ -168,6 +168,14 @@ class InstallerTests(unittest.TestCase):
                 u.refresh_installer('https://site.test/installer.json', ['install'])
             run.assert_not_called()
 
+    def test_metadata_transport_timeout_retries_then_uses_bundled_installer(self):
+        with patch.dict(os.environ, {'EVERYWHERE_UPDATE_TRANSPORT': '["ew", "--linux-update-download"]'}), \
+                patch.object(u.subprocess, 'run', side_effect=subprocess.TimeoutExpired('ew', 200)) as run, \
+                patch.object(u.time, 'sleep'), patch.object(u.UI, 'status') as status:
+            self.assertIsNone(u.refresh_installer('https://site.test/installer.json', ['update']))
+            self.assertEqual(run.call_count, 3)
+            status.assert_called_with('bundled_installer')
+
     def test_network_failure_uses_bundled_installer(self):
         for error in (OSError('offline'), u.DownloadError('application transport failed')):
             with patch.object(u, 'read_json', side_effect=error):
@@ -241,6 +249,8 @@ class InstallerTests(unittest.TestCase):
             pid, fd = pty.fork()
             if pid == 0:
                 try:
+                    os.environ['TERM'] = 'xterm'
+                    os.environ['COLUMNS'] = '80'
                     sys.stdin = io.StringIO('script bytes, not keyboard input')
                     try:
                         print('RESULT:' + u.choose_channel(), flush=True)
