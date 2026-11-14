@@ -108,17 +108,17 @@ class InstallerTests(unittest.TestCase):
 
     def test_fork_catalog_uses_release_assets_and_ignores_installer_tags(self):
         data = b'archive'
-        url = 'https://github.com/pasical/Everywhere/releases/download/v1.2.0/Everywhere-Linux-x64-v1.2.0.tar.zst'
+        url = 'https://github.com/Sylinko/Everywhere/releases/download/v1.2.0/Everywhere-Linux-x64-v1.2.0.tar.zst'
         releases = [{'tag_name': 'linux-installer-latest', 'prerelease': False},
                     {'tag_name': 'v1.2.0', 'prerelease': False, 'assets': [{
                         'name': 'Everywhere-Linux-x64-v1.2.0.tar.zst', 'state': 'uploaded',
                         'size': len(data), 'digest': 'sha256:' + hashlib.sha256(data).hexdigest(),
                         'browser_download_url': url}]}]
         with patch.object(u, 'fetch', return_value=json.dumps(releases).encode()) as fetch:
-            target, item = u.select_package(u.read_catalog('github:pasical/Everywhere'), 'stable', 'x64', 'pacman')
+            target, item = u.select_package(u.read_catalog('github:Sylinko/Everywhere'), 'stable', 'x64', 'pacman')
             self.assertEqual(target, '1.2.0')
             self.assertEqual(item['url'], url)
-            self.assertIn('api.github.com/repos/pasical/Everywhere/releases', fetch.call_args.args[0])
+            self.assertIn('api.github.com/repos/Sylinko/Everywhere/releases', fetch.call_args.args[0])
 
     def test_arch_archive_traversal_rejected_before_build(self):
         data = io.BytesIO()

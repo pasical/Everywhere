@@ -293,9 +293,9 @@ def fetch(url, destination=None, limit=8 * 1024 * 1024):
         time.sleep(attempt + 1)
 
 
-INSTALLER_VERSION = '0.2.0'
-INSTALLER_URL = 'https://github.com/pasical/Everywhere/releases/download/linux-installer-latest/installer.json'
-CATALOG_URL = 'github:pasical/Everywhere'
+INSTALLER_VERSION = '0.2.1'
+INSTALLER_URL = 'https://raw.githubusercontent.com/Sylinko/Everywhere/main/tools/linux-installer/installer.json'
+CATALOG_URL = 'github:Sylinko/Everywhere'
 
 
 def version_key(value):
